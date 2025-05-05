@@ -55,10 +55,21 @@ setActiveTool('draw');
 pdfUpload.addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
+  if (file.type !== 'application/pdf') {
+    alert('Please upload a valid PDF file.');
+    pdfUpload.value = '';
+    return;
+  }
   const reader = new FileReader();
   reader.onload = async function(event) {
     pdfData = new Uint8Array(event.target.result);
-    pdfDoc = await pdfjsLib.getDocument({data: pdfData}).promise;
+    try {
+      pdfDoc = await pdfjsLib.getDocument({data: pdfData}).promise;
+    } catch (err) {
+      alert('Failed to load PDF. The file may be corrupted or not a valid PDF.');
+      pdfUpload.value = '';
+      return;
+    }
     numPages = pdfDoc.numPages;
     currentPage = 1;
     renderPage(currentPage);
@@ -201,7 +212,13 @@ exportBtn.addEventListener('click', async () => {
   if (!pdfDoc) return alert('Please upload a PDF first.');
   saveCurrentAnnotation();
   const { PDFDocument } = window.PDFLib;
-  const pdfDocLib = await PDFDocument.load(pdfData);
+  let pdfDocLib;
+  try {
+    pdfDocLib = await PDFDocument.load(pdfData);
+  } catch (err) {
+    alert('Failed to parse PDF for export. The file may be corrupted or not a valid PDF.');
+    return;
+  }
   for (let i = 0; i < pdfDocLib.getPageCount(); i++) {
     const page = pdfDocLib.getPage(i);
     const pageNum = i + 1;
