@@ -201,14 +201,19 @@ async function savePDF() {
       if (textOverlays.hasOwnProperty(pageNum)) {
         const pageIdx = parseInt(pageNum) - 1; // Convert to 0-based index
         const page = pages[pageIdx];
-        
+        const pageHeight = page.getHeight();
         // Apply each text overlay to the page
         textOverlays[pageNum].forEach(overlay => {
-          // Note: pdf-lib uses bottom-left as origin, so we need to flip y-coordinate
+          // Adjust for scale
+          const pdfX = overlay.x / scale;
+          const pdfFontSize = overlay.fontSize / scale;
+          // Adjust y for scale and baseline (canvas y is top, PDF y is bottom)
+          // Canvas draws text with baseline at y, PDF draws from bottom left, so we subtract font size for better alignment
+          const pdfY = pageHeight - (overlay.y / scale) - pdfFontSize * 0.2;
           page.drawText(overlay.text, {
-            x: overlay.x,
-            y: page.getHeight() - overlay.y, // Flip y-coordinate
-            size: overlay.fontSize,
+            x: pdfX,
+            y: pdfY,
+            size: pdfFontSize,
             color: PDFLib.rgb(1, 0, 0) // Red color
           });
         });
