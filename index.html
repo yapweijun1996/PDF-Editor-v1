@@ -42,7 +42,10 @@
       <button id="redoBtn" disabled>Redo</button>
       <button id="downloadBtn">Save PDF</button>
     </div>
-    <canvas id="pdfCanvas" class="viewer"></canvas>
+    <div class="viewer-container">
+      <canvas id="pdfCanvas" class="viewer"></canvas>
+      <div id="overlayContainer"></div>
+    </div>
     <div class="controls">
       <h2>Add Text (click on canvas to place)</h2>
       <input type="text" id="textInput" placeholder="Text to add" />
@@ -58,6 +61,8 @@
         <option value="center">Center</option>
         <option value="right">Right</option>
       </select>
+      <input type="number" id="xCoordInput" placeholder="X (pts)" readonly />
+      <input type="number" id="yCoordInput" placeholder="Y (pts)" readonly />
     </div>
   </div>
   <script src="script.js"></script>
