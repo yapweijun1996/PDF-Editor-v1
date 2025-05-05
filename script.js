@@ -86,7 +86,7 @@ exportBtn.addEventListener('click', async () => {
   // Get annotation as image
   const annotationImg = annotationCanvas.toDataURL('image/png');
   // Load original PDF with pdf-lib
-  const { PDFDocument, rgb } = window.pdfLib;
+  const { PDFDocument, rgb } = window.PDFLib;
   const pdfDocLib = await PDFDocument.load(pdfData);
   const page = pdfDocLib.getPage(0); // Only first page for demo
   const pngImage = await pdfDocLib.embedPng(annotationImg);
