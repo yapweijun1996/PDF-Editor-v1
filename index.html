@@ -69,7 +69,7 @@
       }
       statusDiv.textContent = 'Merging...';
       try {
-        const { PDFDocument } = window['pdf-lib'];
+        const { PDFDocument } = window.PDFLib;
         const mergedPdf = await PDFDocument.create();
         for (let file of files) {
           const arrayBuffer = await file.arrayBuffer();
