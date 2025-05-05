@@ -1,244 +1,193 @@
-// Initialize the PDF.js worker
+// Entire contents replaced with SVG-based PDF editor logic
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-// Global variables
 let pdfDoc = null;
 let pdfBytes = null;
-let originalPdfBytes = null; // Store original ArrayBuffer
-let currentPage = 1;
-let totalPages = 0;
-let scale = 1.5;
-let textOverlays = {}; // Object to store text overlays for each page
+let originalPdfBytes = null;
+let pageWidth = 0, pageHeight = 0;
+let textElements = [];
 let addingText = false;
-let pdfPageSizes = {}; // Store PDF page size for current page
+let selectedText = null;
+let offsetX = 0, offsetY = 0;
 
-// DOM Elements
 const fileInput = document.getElementById('file-input');
-const pdfCanvas = document.getElementById('pdf-canvas');
-const overlayCanvas = document.getElementById('overlay-canvas');
+const pdfImage = document.getElementById('pdf-image');
+const svgOverlay = document.getElementById('svg-overlay');
 const addTextBtn = document.getElementById('add-text-btn');
 const saveBtn = document.getElementById('save-btn');
-const prevPageBtn = document.getElementById('prev-page');
-const nextPageBtn = document.getElementById('next-page');
-const pageNumDisplay = document.getElementById('page-num');
 const pdfControls = document.getElementById('pdf-controls');
+const editorContainer = document.getElementById('editor-container');
 
-// Event Listeners
 fileInput.addEventListener('change', loadPDF);
-addTextBtn.addEventListener('click', startAddText);
+addTextBtn.addEventListener('click', () => {
+  addingText = true;
+  svgOverlay.style.cursor = 'crosshair';
+});
 saveBtn.addEventListener('click', savePDF);
-prevPageBtn.addEventListener('click', showPrevPage);
-nextPageBtn.addEventListener('click', showNextPage);
 
-// Load PDF from file input
 async function loadPDF(e) {
   const file = e.target.files[0];
   if (!file) return;
-  
-  try {
-    // Read the file as ArrayBuffer
-    const arrayBuffer = await file.arrayBuffer();
-    
-    // Clone the ArrayBuffer for later use with pdf-lib
-    originalPdfBytes = new Uint8Array(arrayBuffer.slice(0));
-    
-    // Use the buffer for PDF.js
-    pdfBytes = arrayBuffer;
-    
-    // Load the PDF with pdf.js
-    const loadingTask = pdfjsLib.getDocument({ data: pdfBytes });
-    pdfDoc = await loadingTask.promise;
-    
-    // Initialize variables
-    totalPages = pdfDoc.numPages;
-    currentPage = 1;
-    textOverlays = {}; // Reset text overlays
-    
-    // Display controls
-    pdfControls.classList.remove('hidden');
-    
-    // Update page display
-    updatePageDisplay();
-    
-    // Render the first page
-    renderPage(currentPage);
-  } catch (error) {
-    console.error('Error loading PDF:', error);
-    alert('Error loading PDF. Please try another file.');
-  }
+  const arrayBuffer = await file.arrayBuffer();
+  originalPdfBytes = new Uint8Array(arrayBuffer.slice(0));
+  pdfBytes = arrayBuffer;
+  const loadingTask = pdfjsLib.getDocument({ data: pdfBytes });
+  pdfDoc = await loadingTask.promise;
+  const page = await pdfDoc.getPage(1);
+  const viewport = page.getViewport({ scale: 2 });
+  pageWidth = viewport.width;
+  pageHeight = viewport.height;
+
+  // Render PDF page to image
+  const canvas = document.createElement('canvas');
+  canvas.width = pageWidth;
+  canvas.height = pageHeight;
+  await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+  pdfImage.src = canvas.toDataURL();
+  pdfImage.width = pageWidth;
+  pdfImage.height = pageHeight;
+
+  // Set SVG overlay size
+  svgOverlay.setAttribute('width', pageWidth);
+  svgOverlay.setAttribute('height', pageHeight);
+  svgOverlay.style.width = pageWidth + 'px';
+  svgOverlay.style.height = pageHeight + 'px';
+  svgOverlay.innerHTML = '';
+  textElements = [];
+  pdfControls.classList.remove('hidden');
 }
 
-// Render a specific page of the PDF
-async function renderPage(pageNum) {
-  try {
-    // Get the page
-    const page = await pdfDoc.getPage(pageNum);
-    
-    // Get the viewport at the desired scale
-    const viewport = page.getViewport({ scale });
-    
-    // Store the actual PDF page size for this page
-    pdfPageSizes[pageNum] = { width: page.view[2], height: page.view[3] };
-    
-    // Set canvas dimensions to match the viewport
-    pdfCanvas.width = viewport.width;
-    pdfCanvas.height = viewport.height;
-    overlayCanvas.width = viewport.width;
-    overlayCanvas.height = viewport.height;
-    
-    // Render the PDF page on the canvas
-    const renderContext = {
-      canvasContext: pdfCanvas.getContext('2d'),
-      viewport: viewport
-    };
-    
-    await page.render(renderContext).promise;
-    
-    // Draw any existing text overlays for this page
-    drawTextOverlays();
-  } catch (error) {
-    console.error('Error rendering page:', error);
-  }
-}
+svgOverlay.addEventListener('mousedown', svgMouseDown);
+svgOverlay.addEventListener('mousemove', svgMouseMove);
+svgOverlay.addEventListener('mouseup', svgMouseUp);
+svgOverlay.addEventListener('dblclick', svgDoubleClick);
+svgOverlay.addEventListener('click', svgClick);
 
-// Show previous page
-function showPrevPage() {
-  if (currentPage <= 1) return;
-  currentPage--;
-  updatePageDisplay();
-  renderPage(currentPage);
-}
-
-// Show next page
-function showNextPage() {
-  if (currentPage >= totalPages) return;
-  currentPage++;
-  updatePageDisplay();
-  renderPage(currentPage);
-}
-
-// Update the page number display
-function updatePageDisplay() {
-  pageNumDisplay.textContent = `Page: ${currentPage} / ${totalPages}`;
-  
-  // Enable/disable navigation buttons
-  prevPageBtn.disabled = currentPage <= 1;
-  nextPageBtn.disabled = currentPage >= totalPages;
-}
-
-// Start adding text process
-function startAddText() {
-  addingText = true;
-  overlayCanvas.style.pointerEvents = 'auto'; // Make overlay clickable
-  overlayCanvas.addEventListener('click', handleCanvasClick);
-}
-
-// Handle click on canvas for text placement
-function handleCanvasClick(e) {
+function svgClick(e) {
   if (!addingText) return;
-  
-  // Get click coordinates relative to the canvas
-  const rect = overlayCanvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-  
-  // Prompt for text
-  const text = prompt("Enter text to add:");
-  
-  if (text) {
-    // Initialize the page's overlay array if it doesn't exist
-    if (!textOverlays[currentPage]) {
-      textOverlays[currentPage] = [];
-    }
-    
-    // Add the text to overlays
-    textOverlays[currentPage].push({
-      text: text,
-      x: x,
-      y: y,
-      fontSize: 20,
-      color: '#FF0000'
-    });
-    
-    // Redraw overlays
-    drawTextOverlays();
-  }
-  
-  // Reset state
+  const pt = getSVGPoint(e);
+  createTextElement('New Text', pt.x, pt.y, 24, '#d32f2f');
   addingText = false;
-  overlayCanvas.style.pointerEvents = 'none';
-  overlayCanvas.removeEventListener('click', handleCanvasClick);
+  svgOverlay.style.cursor = 'default';
 }
 
-// Draw text overlays for the current page
-function drawTextOverlays() {
-  const ctx = overlayCanvas.getContext('2d');
-  
-  // Clear the overlay canvas
-  ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-  
-  // If no overlays for this page, return
-  if (!textOverlays[currentPage]) return;
-  
-  // Draw each text overlay
-  textOverlays[currentPage].forEach(overlay => {
-    ctx.font = `${overlay.fontSize}px Arial`;
-    ctx.fillStyle = overlay.color;
-    ctx.fillText(overlay.text, overlay.x, overlay.y);
+function createTextElement(text, x, y, fontSize, color) {
+  const textEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  textEl.setAttribute('x', x);
+  textEl.setAttribute('y', y);
+  textEl.setAttribute('font-size', fontSize);
+  textEl.setAttribute('fill', color);
+  textEl.setAttribute('class', 'text-element');
+  textEl.textContent = text;
+  svgOverlay.appendChild(textEl);
+  textElements.push({ textEl, x, y, fontSize, color, text });
+  textEl.addEventListener('mousedown', textMouseDown);
+  textEl.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    selectTextElement(textEl);
   });
 }
 
-// Save the PDF with text overlays
-async function savePDF() {
-  if (!originalPdfBytes) {
-    alert('No PDF loaded');
-    return;
+function selectTextElement(textEl) {
+  svgOverlay.querySelectorAll('.text-element').forEach(el => el.classList.remove('selected'));
+  textEl.classList.add('selected');
+  selectedText = textElements.find(t => t.textEl === textEl);
+}
+
+function textMouseDown(e) {
+  e.stopPropagation();
+  selectTextElement(e.target);
+  const pt = getSVGPoint(e);
+  offsetX = pt.x - parseFloat(selectedText.textEl.getAttribute('x'));
+  offsetY = pt.y - parseFloat(selectedText.textEl.getAttribute('y'));
+  svgOverlay.setAttribute('data-dragging', 'true');
+}
+
+function svgMouseDown(e) {
+  if (e.target.classList.contains('text-element')) return;
+  selectedText = null;
+  svgOverlay.querySelectorAll('.text-element').forEach(el => el.classList.remove('selected'));
+}
+
+function svgMouseMove(e) {
+  if (svgOverlay.getAttribute('data-dragging') === 'true' && selectedText) {
+    const pt = getSVGPoint(e);
+    selectedText.x = pt.x - offsetX;
+    selectedText.y = pt.y - offsetY;
+    selectedText.textEl.setAttribute('x', selectedText.x);
+    selectedText.textEl.setAttribute('y', selectedText.y);
   }
-  
-  try {
-    // Load the PDF with pdf-lib using the original bytes
-    const pdfDocLib = await PDFLib.PDFDocument.load(originalPdfBytes);
-    const pages = pdfDocLib.getPages();
-    
-    // Process each page that has overlays
-    for (const pageNum in textOverlays) {
-      if (textOverlays.hasOwnProperty(pageNum)) {
-        const pageIdx = parseInt(pageNum) - 1; // Convert to 0-based index
-        const page = pages[pageIdx];
-        const pdfPageWidth = page.getWidth();
-        const pdfPageHeight = page.getHeight();
-        const canvasWidth = pdfCanvas.width;
-        const canvasHeight = pdfCanvas.height;
-        // Apply each text overlay to the page
-        textOverlays[pageNum].forEach(overlay => {
-          // Robust mapping from canvas to PDF coordinates and font size
-          const pdfX = overlay.x * (pdfPageWidth / canvasWidth);
-          const pdfFontSize = overlay.fontSize * (pdfPageHeight / canvasHeight);
-          // Canvas y is from top, PDF y is from bottom
-          const pdfY = pdfPageHeight - overlay.y * (pdfPageHeight / canvasHeight) - pdfFontSize * 0.2;
-          page.drawText(overlay.text, {
-            x: pdfX,
-            y: pdfY,
-            size: pdfFontSize,
-            color: PDFLib.rgb(1, 0, 0) // Red color
-          });
-        });
-      }
+}
+
+function svgMouseUp(e) {
+  svgOverlay.removeAttribute('data-dragging');
+}
+
+function svgDoubleClick(e) {
+  if (!e.target.classList.contains('text-element')) return;
+  const textObj = textElements.find(t => t.textEl === e.target);
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = textObj.text;
+  input.className = 'text-edit';
+  input.style.left = (parseFloat(e.target.getAttribute('x')) - 2) + 'px';
+  input.style.top = (parseFloat(e.target.getAttribute('y')) - 24) + 'px';
+  input.style.fontSize = e.target.getAttribute('font-size') + 'px';
+  editorContainer.appendChild(input);
+  input.focus();
+  input.addEventListener('blur', () => {
+    textObj.text = input.value;
+    textObj.textEl.textContent = input.value;
+    editorContainer.removeChild(input);
+  });
+  input.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter') input.blur();
+    if (ev.key === 'Escape') {
+      editorContainer.removeChild(input);
     }
-    
-    // Save the modified PDF
-    const modifiedPdfBytes = await pdfDocLib.save();
-    
-    // Create a Blob from the PDF bytes
-    const blob = new Blob([modifiedPdfBytes], { type: 'application/pdf' });
-    
-    // Create a download link and trigger download
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'edited-pdf.pdf';
-    link.click();
-  } catch (error) {
-    console.error('Error saving PDF:', error);
-    alert('Error saving PDF. Please try again.');
+  });
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Delete' && selectedText) {
+    svgOverlay.removeChild(selectedText.textEl);
+    textElements = textElements.filter(t => t !== selectedText);
+    selectedText = null;
   }
+});
+
+function getSVGPoint(evt) {
+  const rect = svgOverlay.getBoundingClientRect();
+  return {
+    x: (evt.clientX - rect.left) * (svgOverlay.width.baseVal.value / rect.width),
+    y: (evt.clientY - rect.top) * (svgOverlay.height.baseVal.value / rect.height)
+  };
+}
+
+async function savePDF() {
+  if (!originalPdfBytes) return;
+  const pdfDocLib = await PDFLib.PDFDocument.load(originalPdfBytes);
+  const page = pdfDocLib.getPages()[0];
+  const pdfW = page.getWidth();
+  const pdfH = page.getHeight();
+  const svgW = svgOverlay.width.baseVal.value;
+  const svgH = svgOverlay.height.baseVal.value;
+
+  for (const t of textElements) {
+    const pdfX = t.x * (pdfW / svgW);
+    const pdfFontSize = t.fontSize * (pdfH / svgH);
+    const pdfY = pdfH - t.y * (pdfH / svgH) - pdfFontSize * 0.2;
+    page.drawText(t.text, {
+      x: pdfX,
+      y: pdfY,
+      size: pdfFontSize,
+      color: PDFLib.rgb(0.83, 0.18, 0.18)
+    });
+  }
+  const newPdfBytes = await pdfDocLib.save();
+  const blob = new Blob([newPdfBytes], { type: 'application/pdf' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'edited.pdf';
+  link.click();
 } 
