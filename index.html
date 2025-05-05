@@ -3,23 +3,95 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Minimal PDF Editor</title>
-  <link rel="stylesheet" href="style.css">
-  <!-- PDF.js CDN -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <!-- pdf-lib CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/pdf-lib/dist/pdf-lib.min.js"></script>
+  <title>PDF Merger</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f7f7f7;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .container {
+      background: #fff;
+      padding: 2rem 2.5rem;
+      border-radius: 10px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+    }
+    input[type="file"] {
+      margin-bottom: 1rem;
+    }
+    button {
+      padding: 0.5rem 1.5rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 5px;
+      background: #007bff;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    #status {
+      color: #333;
+      font-size: 0.95rem;
+      min-height: 1.2em;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
-    <h1>Minimal PDF Editor</h1>
-    <input type="file" id="file-input" accept="application/pdf">
-    <div id="pdf-container">
-      <canvas id="pdf-canvas"></canvas>
-    </div>
-    <button id="download-btn" disabled>Download Annotated PDF</button>
-    <p>Click on the PDF to add a text annotation.</p>
+    <h2>Merge PDF Files</h2>
+    <input type="file" id="pdfs" multiple accept="application/pdf">
+    <button id="merge">Merge PDFs</button>
+    <div id="status"></div>
   </div>
-  <script src="main.js"></script>
+  <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+  <script>
+    const input = document.getElementById('pdfs');
+    const mergeBtn = document.getElementById('merge');
+    const statusDiv = document.getElementById('status');
+
+    mergeBtn.onclick = async () => {
+      const files = input.files;
+      if (!files.length) {
+        statusDiv.textContent = 'Please select PDF files.';
+        return;
+      }
+      statusDiv.textContent = 'Merging...';
+      try {
+        const { PDFDocument } = window['pdf-lib'];
+        const mergedPdf = await PDFDocument.create();
+        for (let file of files) {
+          const arrayBuffer = await file.arrayBuffer();
+          const pdf = await PDFDocument.load(arrayBuffer);
+          const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+          copiedPages.forEach(page => mergedPdf.addPage(page));
+        }
+        const mergedPdfBytes = await mergedPdf.save();
+        const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'merged.pdf';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        statusDiv.textContent = 'Merged PDF downloaded!';
+      } catch (err) {
+        statusDiv.textContent = 'Error merging PDFs: ' + err.message;
+      }
+    };
+  </script>
 </body>
 </html> 
