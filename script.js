@@ -76,6 +76,7 @@ function createTextElement(text, x, y, fontSize, color) {
   textEl.setAttribute('x', x);
   textEl.setAttribute('y', y);
   textEl.setAttribute('font-size', fontSize);
+  textEl.setAttribute('font-family', 'Helvetica, Arial, sans-serif');
   textEl.setAttribute('fill', color);
   textEl.setAttribute('class', 'text-element');
   textEl.textContent = text;
@@ -165,29 +166,16 @@ function getSVGPoint(evt) {
 }
 
 async function savePDF() {
-  if (!originalPdfBytes) return;
-  const pdfDocLib = await PDFLib.PDFDocument.load(originalPdfBytes);
-  const page = pdfDocLib.getPages()[0];
-  const pdfW = page.getWidth();
-  const pdfH = page.getHeight();
-  const svgW = svgOverlay.width.baseVal.value;
-  const svgH = svgOverlay.height.baseVal.value;
-
-  for (const t of textElements) {
-    const pdfX = t.x * (pdfW / svgW);
-    const pdfFontSize = t.fontSize * (pdfH / svgH);
-    const pdfY = pdfH - t.y * (pdfH / svgH) - pdfFontSize * 0.2;
-    page.drawText(t.text, {
-      x: pdfX,
-      y: pdfY,
-      size: pdfFontSize,
-      color: PDFLib.rgb(0.83, 0.18, 0.18)
-    });
-  }
-  const newPdfBytes = await pdfDocLib.save();
-  const blob = new Blob([newPdfBytes], { type: 'application/pdf' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = 'edited.pdf';
-  link.click();
+  // Capture the editor container as an image
+  const canvasSnap = await html2canvas(editorContainer, {
+    backgroundColor: '#fff',
+    useCORS: true,
+    scale: 1
+  });
+  const imgData = canvasSnap.toDataURL('image/png');
+  // Create PDF with jsPDF (unit in px matches canvas pixels)
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ unit: 'px', format: [canvasSnap.width, canvasSnap.height] });
+  pdf.addImage(imgData, 'PNG', 0, 0, canvasSnap.width, canvasSnap.height);
+  pdf.save('edited.pdf');
 } 
