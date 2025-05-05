@@ -1,32 +1,28 @@
-// Initialize PDF.js
+// Initialize PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-const scale = 1.5;            // Render scale: PDF pt to canvas px
-const defaultFontSize = 20;    // Default font size in PDF points
-
+// Globals
 let pdfDoc = null;
 let pdfBytes = null;
-let viewport = null;
+const scale = 1;      // 1 PDF pt = 1 canvas px
 let textOverlays = [];
 
-// DOM
-const fileInput = document.getElementById('file-input');
-const pdfCanvas = document.getElementById('pdf-canvas');
+// DOM Elements
+const fileInput     = document.getElementById('file-input');
+const pdfCanvas     = document.getElementById('pdf-canvas');
 const overlayCanvas = document.getElementById('overlay-canvas');
-const addTextBtn = document.getElementById('add-text-btn');
-const saveBtn = document.getElementById('save-btn');
-const pdfControls = document.getElementById('pdf-controls');
+const addTextBtn    = document.getElementById('add-text-btn');
+const saveBtn       = document.getElementById('save-btn');
+const pdfControls   = document.getElementById('pdf-controls');
 
-// Events
-fileInput.addEventListener('change', loadPDF);
-addTextBtn.addEventListener('click', () => {
-  overlayCanvas.style.pointerEvents = 'auto';
-});
+// Event listeners
+fileInput.addEventListener('change', handleFile);
+addTextBtn.addEventListener('click', () => overlayCanvas.style.pointerEvents = 'auto');
 saveBtn.addEventListener('click', savePDF);
-overlayCanvas.addEventListener('click', addTextOverlay);
+overlayCanvas.addEventListener('click', placeText);
 
-// Load PDF and render first page
-async function loadPDF(e) {
+// Handle PDF file input
+async function handleFile(e) {
   const file = e.target.files[0];
   if (!file) return;
   pdfBytes = await file.arrayBuffer();
@@ -35,75 +31,93 @@ async function loadPDF(e) {
   await renderPage(1);
 }
 
-// Render a PDF page to canvas
-async function renderPage(pageNumber) {
-  const page = await pdfDoc.getPage(pageNumber);
+// Render page # to canvas
+async function renderPage(pageNum) {
+  const page = await pdfDoc.getPage(pageNum);
   const viewport = page.getViewport({ scale });
+  // Enable high DPI support
+  const dpr = window.devicePixelRatio || 1;
 
-  // Resize canvases
-  pdfCanvas.width     = viewport.width;
-  pdfCanvas.height    = viewport.height;
-  overlayCanvas.width = viewport.width;
-  overlayCanvas.height= viewport.height;
+  // Set canvas buffer size and CSS dimensions
+  pdfCanvas.width = viewport.width * dpr;
+  pdfCanvas.height = viewport.height * dpr;
+  pdfCanvas.style.width = `${viewport.width}px`;
+  pdfCanvas.style.height = `${viewport.height}px`;
+  overlayCanvas.width = viewport.width * dpr;
+  overlayCanvas.height = viewport.height * dpr;
+  overlayCanvas.style.width = `${viewport.width}px`;
+  overlayCanvas.style.height = `${viewport.height}px`;
 
-  // Render PDF page
-  await page.render({ canvasContext: pdfCanvas.getContext('2d'), viewport }).promise;
+  // Scale drawing contexts to account for DPR
+  const pdfCtx = pdfCanvas.getContext('2d');
+  pdfCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const overlayCtx = overlayCanvas.getContext('2d');
+  overlayCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  await page.render({ canvasContext: pdfCtx, viewport }).promise;
+  textOverlays = [];
   drawOverlays();
 }
 
-// Redraw text overlays on overlay canvas
+// Draw overlays on overlayCanvas
 function drawOverlays() {
   const ctx = overlayCanvas.getContext('2d');
   ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+  ctx.fillStyle = 'red';
+  // Use alphabetic baseline to match PDF-lib baseline
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = 'left';
   textOverlays.forEach(o => {
-    // Set overlay font to match PDF font at scale
-    const overlayFontSize = o.pdfFontSize * scale;
-    ctx.font = `${overlayFontSize}px Helvetica`;
-    ctx.textBaseline = 'alphabetic';
-    ctx.fillStyle = 'red';
-    // draw at canvas coords
-    ctx.fillText(o.text, o.xCanvas, o.yCanvas);
+    ctx.font = `${o.fontSize}px Helvetica`;
+    ctx.fillText(o.text, o.x, o.y);
   });
   overlayCanvas.style.pointerEvents = 'none';
 }
 
-// Handle click to add text overlay
-function addTextOverlay(e) {
-  if (overlayCanvas.style.pointerEvents !== 'auto') return;
+// Place text overlay on click
+function placeText(e) {
   const rect = overlayCanvas.getBoundingClientRect();
-  const xCanvas = e.clientX - rect.left;
-  const yCanvas = e.clientY - rect.top;
+  // Get click position in CSS pixels
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
   const text = prompt('Enter text:');
-  if (!text) return;
-  // Convert canvas coords to PDF points
-  const [pdfX, pdfY] = viewport.convertToPdfPoint(xCanvas, yCanvas);
-  textOverlays.push({ text, xCanvas, yCanvas, pdfX, pdfY, pdfFontSize: defaultFontSize });
-  drawOverlays();
+  if (text) {
+    const fontSize = 20;
+    const ctx = overlayCanvas.getContext('2d');
+    // Set font to measure ascent
+    ctx.font = `${fontSize}px Helvetica`;
+    const metrics = ctx.measureText(text);
+    // Use actualBoundingBoxAscent for precise baseline alignment (fallback to 0.8*fontSize)
+    const ascent = metrics.actualBoundingBoxAscent || fontSize * 0.8;
+    // Calculate baseline Y so text top matches click Y
+    const baselineY = y + ascent;
+    // Store CSS-space coords for preview (will be scaled by DPR in drawOverlays)
+    textOverlays.push({ text, x, y: baselineY, fontSize });
+    drawOverlays();
+  }
 }
 
 // Save edited PDF
 async function savePDF() {
   if (!pdfBytes) return;
   const pdfDocLib = await PDFLib.PDFDocument.load(pdfBytes);
-  const helveticaFont = await pdfDocLib.embedFont(PDFLib.StandardFonts.Helvetica);
+  const helv = await pdfDocLib.embedFont(PDFLib.StandardFonts.Helvetica);
   const page = pdfDocLib.getPages()[0];
-  const pageHeight = page.getHeight();
-
+  const ph = page.getHeight();
   textOverlays.forEach(o => {
-    const pdfSize = o.pdfFontSize;
-    // Subtract ascent so click Y becomes top-of-text
-    const ascent = helveticaFont.ascentAtSize(pdfSize);
+    const size = o.fontSize / scale;
+    // o.y is baseline (alphabetic), so map directly to PDF baseline
+    const pdfY = ph - (o.y / scale);
     page.drawText(o.text, {
-      x: o.pdfX,
-      y: o.pdfY - ascent,
-      size: pdfSize,
-      font: helveticaFont,
+      x: o.x / scale,
+      y: pdfY,
+      size,
+      font: helv,
       color: PDFLib.rgb(1, 0, 0)
     });
   });
-
-  const newPdfBytes = await pdfDocLib.save();
-  const blob = new Blob([newPdfBytes], { type: 'application/pdf' });
+  const newBytes = await pdfDocLib.save();
+  const blob = new Blob([newBytes], { type: 'application/pdf' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
   link.download = 'edited.pdf';
