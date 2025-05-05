@@ -17,11 +17,15 @@
   background: #f0f0f0;
   border: 1px solid #ccc;
 }
+#pdf-canvas {
+  z-index: 1;
+}
 #annotation-canvas {
   position: absolute;
   left: 0;
   top: 0;
   pointer-events: auto;
+  z-index: 2;
 }
 #export-btn {
   margin-top: 20px;

@@ -72,6 +72,7 @@ pdfUpload.addEventListener('change', async (e) => {
     }
     numPages = pdfDoc.numPages;
     currentPage = 1;
+    setActiveTool('draw');
     renderPage(currentPage);
   };
   reader.readAsArrayBuffer(file);
@@ -131,6 +132,10 @@ function saveCurrentAnnotation() {
 
 // Drawing on annotation canvas (only if draw tool is active)
 annotationCanvas.addEventListener('mousedown', (e) => {
+  if (!pdfDoc) {
+    alert('Please upload and load a PDF before drawing.');
+    return;
+  }
   if (activeTool !== 'draw') return;
   drawing = true;
   [lastX, lastY] = getCanvasCoords(e);
