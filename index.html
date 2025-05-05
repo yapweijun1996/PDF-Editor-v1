@@ -13,12 +13,35 @@
 <body>
   <div class="container">
     <h1>PDF Editor</h1>
+    <div class="toolbar">
+      <button id="tool-draw">Draw</button>
+      <button id="tool-signature">Add Signature</button>
+      <button id="tool-text">Add Text</button>
+      <button id="tool-date">Add Date</button>
+      <button id="tool-select">Select/Move</button>
+    </div>
     <input type="file" id="pdf-upload" accept="application/pdf">
     <div id="pdf-container">
       <canvas id="pdf-canvas"></canvas>
       <canvas id="annotation-canvas"></canvas>
     </div>
+    <div class="page-nav">
+      <button id="prev-page">Prev</button>
+      <span id="page-info">Page 1</span>
+      <button id="next-page">Next</button>
+    </div>
     <button id="export-btn">Export Annotated PDF</button>
+    <div id="signature-modal" class="modal">
+      <div class="modal-content">
+        <h2>Draw your signature</h2>
+        <canvas id="signature-canvas" width="300" height="100"></canvas>
+        <div>
+          <button id="clear-signature">Clear</button>
+          <button id="save-signature">Save</button>
+          <button id="close-signature">Cancel</button>
+        </div>
+      </div>
+    </div>
   </div>
   <script src="script.js"></script>
 </body>

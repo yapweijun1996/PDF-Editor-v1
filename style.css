@@ -35,4 +35,66 @@
 }
 #export-btn:hover {
   background: #0056b3;
+}
+.toolbar {
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+.toolbar button {
+  padding: 8px 16px;
+  font-size: 15px;
+  border: 1px solid #ccc;
+  background: #f8f8f8;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.toolbar button.active, .toolbar button:hover {
+  background: #007bff;
+  color: #fff;
+}
+.page-nav {
+  margin: 12px 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+.page-nav button {
+  padding: 6px 14px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  background: #f8f8f8;
+  border-radius: 4px;
+  cursor: pointer;
+}
+#page-info {
+  font-weight: bold;
+}
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0; top: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.4);
+  justify-content: center;
+  align-items: center;
+}
+.modal.active {
+  display: flex;
+}
+.modal-content {
+  background: #fff;
+  padding: 24px;
+  border-radius: 8px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.2);
+  text-align: center;
+}
+#signature-canvas {
+  border: 1px solid #ccc;
+  background: #fafafa;
+  margin-bottom: 12px;
+  border-radius: 4px;
 } 
