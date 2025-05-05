@@ -214,19 +214,38 @@
 
     // PDF.js preview logic
     async function previewPDF(file) {
+      // Debug: Log pdfjsLib and file info
+      console.log('window.pdfjsLib:', window.pdfjsLib);
+      console.log('Previewing file:', file.name, 'size:', file.size);
       const fileReader = new FileReader();
       fileReader.onload = async function() {
-        const typedarray = new Uint8Array(this.result);
-        const loadingTask = window['pdfjsLib'].getDocument({data: typedarray});
-        const pdf = await loadingTask.promise;
-        const page = await pdf.getPage(1);
-        const viewport = page.getViewport({scale: 1.5});
-        const canvas = pdfPreview;
-        const context = canvas.getContext('2d');
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        await page.render({canvasContext: context, viewport: viewport}).promise;
-        previewModal.style.display = 'flex';
+        try {
+          if (!window.pdfjsLib) {
+            alert('PDF.js library not loaded!');
+            return;
+          }
+          const typedarray = new Uint8Array(this.result);
+          const loadingTask = window['pdfjsLib'].getDocument({data: typedarray});
+          const pdf = await loadingTask.promise;
+          const page = await pdf.getPage(1);
+          const viewport = page.getViewport({scale: 1.5});
+          const canvas = pdfPreview;
+          const context = canvas.getContext('2d');
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          await page.render({canvasContext: context, viewport: viewport}).promise;
+          previewModal.style.display = 'flex';
+        } catch (err) {
+          console.error('PDF preview error:', err);
+          pdfPreview.width = 400;
+          pdfPreview.height = 100;
+          const ctx = pdfPreview.getContext('2d');
+          ctx.clearRect(0, 0, pdfPreview.width, pdfPreview.height);
+          ctx.font = '16px Arial';
+          ctx.fillStyle = 'red';
+          ctx.fillText('Error loading PDF preview', 10, 50);
+          previewModal.style.display = 'flex';
+        }
       };
       fileReader.readAsArrayBuffer(file);
     }
