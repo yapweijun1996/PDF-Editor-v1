@@ -1,200 +1,108 @@
-// Entire contents replaced with SVG-based PDF editor logic
+// Initialize PDF.js
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+const scale = 1.5;            // Render scale: PDF pt to canvas px
+const defaultFontSize = 20;    // Default font size in PDF points
 
 let pdfDoc = null;
 let pdfBytes = null;
-let originalPdfBytes = null;
-let pageWidth = 0, pageHeight = 0;
-let textElements = [];
-let addingText = false;
-let selectedText = null;
-let offsetX = 0, offsetY = 0;
+let viewport = null;
+let textOverlays = [];
 
+// DOM
 const fileInput = document.getElementById('file-input');
-const pdfImage = document.getElementById('pdf-image');
-const svgOverlay = document.getElementById('svg-overlay');
+const pdfCanvas = document.getElementById('pdf-canvas');
+const overlayCanvas = document.getElementById('overlay-canvas');
 const addTextBtn = document.getElementById('add-text-btn');
 const saveBtn = document.getElementById('save-btn');
 const pdfControls = document.getElementById('pdf-controls');
-const editorContainer = document.getElementById('editor-container');
 
+// Events
 fileInput.addEventListener('change', loadPDF);
 addTextBtn.addEventListener('click', () => {
-  addingText = true;
-  svgOverlay.style.cursor = 'crosshair';
+  overlayCanvas.style.pointerEvents = 'auto';
 });
 saveBtn.addEventListener('click', savePDF);
+overlayCanvas.addEventListener('click', addTextOverlay);
 
+// Load PDF and render first page
 async function loadPDF(e) {
   const file = e.target.files[0];
   if (!file) return;
-  const arrayBuffer = await file.arrayBuffer();
-  originalPdfBytes = new Uint8Array(arrayBuffer.slice(0));
-  pdfBytes = arrayBuffer;
-  const loadingTask = pdfjsLib.getDocument({ data: pdfBytes });
-  pdfDoc = await loadingTask.promise;
-  const page = await pdfDoc.getPage(1);
-  const viewport = page.getViewport({ scale: 2 });
-  pageWidth = viewport.width;
-  pageHeight = viewport.height;
-
-  // Render PDF page to image
-  const canvas = document.createElement('canvas');
-  canvas.width = pageWidth;
-  canvas.height = pageHeight;
-  await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-  pdfImage.src = canvas.toDataURL();
-  pdfImage.width = pageWidth;
-  pdfImage.height = pageHeight;
-
-  // Set SVG overlay size
-  svgOverlay.setAttribute('width', pageWidth);
-  svgOverlay.setAttribute('height', pageHeight);
-  svgOverlay.style.width = pageWidth + 'px';
-  svgOverlay.style.height = pageHeight + 'px';
-  svgOverlay.innerHTML = '';
-  textElements = [];
+  pdfBytes = await file.arrayBuffer();
+  pdfDoc = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
   pdfControls.classList.remove('hidden');
+  await renderPage(1);
 }
 
-svgOverlay.addEventListener('mousedown', svgMouseDown);
-svgOverlay.addEventListener('mousemove', svgMouseMove);
-svgOverlay.addEventListener('mouseup', svgMouseUp);
-svgOverlay.addEventListener('dblclick', svgDoubleClick);
-svgOverlay.addEventListener('click', svgClick);
+// Render a PDF page to canvas
+async function renderPage(pageNumber) {
+  const page = await pdfDoc.getPage(pageNumber);
+  const viewport = page.getViewport({ scale });
 
-function svgClick(e) {
-  if (!addingText) return;
-  const pt = getSVGPoint(e);
-  createTextElement('New Text', pt.x, pt.y, 24, '#d32f2f');
-  addingText = false;
-  svgOverlay.style.cursor = 'default';
+  // Resize canvases
+  pdfCanvas.width     = viewport.width;
+  pdfCanvas.height    = viewport.height;
+  overlayCanvas.width = viewport.width;
+  overlayCanvas.height= viewport.height;
+
+  // Render PDF page
+  await page.render({ canvasContext: pdfCanvas.getContext('2d'), viewport }).promise;
+  drawOverlays();
 }
 
-function createTextElement(text, x, y, fontSize, color) {
-  const textEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-  textEl.setAttribute('x', x);
-  textEl.setAttribute('y', y);
-  textEl.setAttribute('font-size', fontSize);
-  textEl.setAttribute('font-family', 'Helvetica, Arial, sans-serif');
-  textEl.setAttribute('fill', color);
-  textEl.setAttribute('class', 'text-element');
-  textEl.textContent = text;
-  svgOverlay.appendChild(textEl);
-  // Store text info for PDF mapping
-  textElements.push({ textEl, x, y, fontSize, color, text });
-  textEl.addEventListener('mousedown', textMouseDown);
-  textEl.addEventListener('click', ev => {
-    ev.stopPropagation();
-    selectTextElement(textEl);
+// Redraw text overlays on overlay canvas
+function drawOverlays() {
+  const ctx = overlayCanvas.getContext('2d');
+  ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+  textOverlays.forEach(o => {
+    // Set overlay font to match PDF font at scale
+    const overlayFontSize = o.pdfFontSize * scale;
+    ctx.font = `${overlayFontSize}px Helvetica`;
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = 'red';
+    // draw at canvas coords
+    ctx.fillText(o.text, o.xCanvas, o.yCanvas);
   });
+  overlayCanvas.style.pointerEvents = 'none';
 }
 
-function selectTextElement(textEl) {
-  svgOverlay.querySelectorAll('.text-element').forEach(el => el.classList.remove('selected'));
-  textEl.classList.add('selected');
-  selectedText = textElements.find(t => t.textEl === textEl);
+// Handle click to add text overlay
+function addTextOverlay(e) {
+  if (overlayCanvas.style.pointerEvents !== 'auto') return;
+  const rect = overlayCanvas.getBoundingClientRect();
+  const xCanvas = e.clientX - rect.left;
+  const yCanvas = e.clientY - rect.top;
+  const text = prompt('Enter text:');
+  if (!text) return;
+  // Convert canvas coords to PDF points
+  const [pdfX, pdfY] = viewport.convertToPdfPoint(xCanvas, yCanvas);
+  textOverlays.push({ text, xCanvas, yCanvas, pdfX, pdfY, pdfFontSize: defaultFontSize });
+  drawOverlays();
 }
 
-function textMouseDown(e) {
-  e.stopPropagation();
-  selectTextElement(e.target);
-  const pt = getSVGPoint(e);
-  offsetX = pt.x - parseFloat(selectedText.textEl.getAttribute('x'));
-  offsetY = pt.y - parseFloat(selectedText.textEl.getAttribute('y'));
-  svgOverlay.setAttribute('data-dragging', 'true');
-}
-
-function svgMouseDown(e) {
-  if (e.target.classList.contains('text-element')) return;
-  selectedText = null;
-  svgOverlay.querySelectorAll('.text-element').forEach(el => el.classList.remove('selected'));
-}
-
-function svgMouseMove(e) {
-  if (svgOverlay.getAttribute('data-dragging') === 'true' && selectedText) {
-    const pt = getSVGPoint(e);
-    selectedText.x = pt.x - offsetX;
-    selectedText.y = pt.y - offsetY;
-    selectedText.textEl.setAttribute('x', selectedText.x);
-    selectedText.textEl.setAttribute('y', selectedText.y);
-  }
-}
-
-function svgMouseUp(e) {
-  svgOverlay.removeAttribute('data-dragging');
-}
-
-function svgDoubleClick(e) {
-  if (!e.target.classList.contains('text-element')) return;
-  const textObj = textElements.find(t => t.textEl === e.target);
-  const input = document.createElement('input');
-  input.type = 'text';
-  input.value = textObj.text;
-  input.className = 'text-edit';
-  input.style.left = (parseFloat(e.target.getAttribute('x')) - 2) + 'px';
-  input.style.top = (parseFloat(e.target.getAttribute('y')) - 24) + 'px';
-  input.style.fontSize = e.target.getAttribute('font-size') + 'px';
-  editorContainer.appendChild(input);
-  input.focus();
-  input.addEventListener('blur', () => {
-    textObj.text = input.value;
-    textObj.textEl.textContent = input.value;
-    editorContainer.removeChild(input);
-  });
-  input.addEventListener('keydown', (ev) => {
-    if (ev.key === 'Enter') input.blur();
-    if (ev.key === 'Escape') {
-      editorContainer.removeChild(input);
-    }
-  });
-}
-
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Delete' && selectedText) {
-    svgOverlay.removeChild(selectedText.textEl);
-    textElements = textElements.filter(t => t !== selectedText);
-    selectedText = null;
-  }
-});
-
-function getSVGPoint(evt) {
-  const rect = svgOverlay.getBoundingClientRect();
-  return {
-    x: (evt.clientX - rect.left) * (svgOverlay.width.baseVal.value / rect.width),
-    y: (evt.clientY - rect.top) * (svgOverlay.height.baseVal.value / rect.height)
-  };
-}
-
-// Save the PDF using pdf-lib
+// Save edited PDF
 async function savePDF() {
-  if (!originalPdfBytes) {
-    alert('No PDF loaded');
-    return;
-  }
-  const pdfDoc = await PDFLib.PDFDocument.load(originalPdfBytes);
-  const helveticaFont = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
-  const page = pdfDoc.getPages()[0];
-  const pdfW = page.getWidth();
-  const pdfH = page.getHeight();
-  const svgW = svgOverlay.width.baseVal.value;
-  const svgH = svgOverlay.height.baseVal.value;
+  if (!pdfBytes) return;
+  const pdfDocLib = await PDFLib.PDFDocument.load(pdfBytes);
+  const helveticaFont = await pdfDocLib.embedFont(PDFLib.StandardFonts.Helvetica);
+  const page = pdfDocLib.getPages()[0];
+  const pageHeight = page.getHeight();
 
-  textElements.forEach(t => {
-    // Map canvas/SVG coordinates to PDF coordinates
-    const pdfX = t.x * (pdfW / svgW);
-    const pdfY = pdfH - t.y * (pdfH / svgH);
-    const pdfFontSize = t.fontSize * (pdfH / svgH);
-    page.drawText(t.text, {
-      x: pdfX,
-      y: pdfY,
-      size: pdfFontSize,
+  textOverlays.forEach(o => {
+    const pdfSize = o.pdfFontSize;
+    // Subtract ascent so click Y becomes top-of-text
+    const ascent = helveticaFont.ascentAtSize(pdfSize);
+    page.drawText(o.text, {
+      x: o.pdfX,
+      y: o.pdfY - ascent,
+      size: pdfSize,
       font: helveticaFont,
-      color: PDFLib.rgb(0.83, 0.18, 0.18)
+      color: PDFLib.rgb(1, 0, 0)
     });
   });
 
-  const newPdfBytes = await pdfDoc.save();
+  const newPdfBytes = await pdfDocLib.save();
   const blob = new Blob([newPdfBytes], { type: 'application/pdf' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);

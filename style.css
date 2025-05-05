@@ -70,7 +70,8 @@ h1 {
 #pdf-image {
   display: block;
   border: 1px solid #ccc;
-  max-width: 100%;
+  /* Prevent responsive scaling: use intrinsic width */
+  max-width: none;
 }
 
 #svg-overlay {
