@@ -1,108 +1,49 @@
-/* Reset */
-* {
-  box-sizing: border-box;
+body {
+  font-family: Arial, sans-serif;
+  background: #f4f4f4;
   margin: 0;
   padding: 0;
 }
 
-/* Layout */
-body {
-  font-family: 'Helvetica', Arial, sans-serif;
-  background: #f5f5f5;
-  padding: 20px;
-}
-
 .container {
-  max-width: 900px;
-  margin: 0 auto;
+  max-width: 600px;
+  margin: 40px auto;
   background: #fff;
-  padding: 20px;
+  padding: 24px;
   border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
-
-h1 {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   text-align: center;
-  margin-bottom: 20px;
 }
 
-/* File input */
 #file-input {
-  display: block;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
-/* Controls */
-#pdf-controls {
-  margin-bottom: 20px;
+#pdf-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
 }
 
-.btn {
-  padding: 8px 15px;
+#pdf-canvas {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fafafa;
+  max-width: 100%;
+}
+
+button {
+  background: #007bff;
+  color: #fff;
   border: none;
+  padding: 10px 20px;
   border-radius: 4px;
   cursor: pointer;
-  background: #ecf0f1;
-  color: #333;
-  margin-right: 10px;
-  transition: background 0.3s;
+  font-size: 16px;
+  transition: background 0.2s;
 }
 
-.btn:hover {
-  background: #dde4e6;
-}
-
-.btn.primary {
-  background: #2ecc71;
-  color: #fff;
-}
-
-.btn.primary:hover {
-  background: #27ae60;
-}
-
-/* Editor Container */
-#editor-container {
-  position: relative;
-  display: inline-block;
-}
-
-#pdf-image {
-  display: block;
-  border: 1px solid #ccc;
-  /* Prevent responsive scaling: use intrinsic width */
-  max-width: none;
-}
-
-#svg-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  pointer-events: all;
-}
-
-/* Text Elements */
-.text-element {
-  cursor: move;
-  user-select: none;
-  font-family: Arial, sans-serif;
-}
-
-.text-element.selected {
-  outline: 1px dashed #2ecc71;
-}
-
-/* Inline Text Edit Input */
-input.text-edit {
-  position: absolute;
-  z-index: 10;
-  border: 1px solid #2ecc71;
-  border-radius: 3px;
-  padding: 2px 4px;
-  font-size: 18px;
-}
-
-/* Hidden */
-.hidden {
-  display: none;
+button:disabled {
+  background: #aaa;
+  cursor: not-allowed;
 } 

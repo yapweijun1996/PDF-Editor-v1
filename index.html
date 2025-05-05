@@ -3,27 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SVG PDF Editor</title>
+  <title>Minimal PDF Editor</title>
   <link rel="stylesheet" href="style.css">
+  <!-- PDF.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <!-- pdf-lib CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib/dist/pdf-lib.min.js"></script>
 </head>
 <body>
   <div class="container">
-    <h1>SVG PDF Editor</h1>
-    <input type="file" id="file-input" accept="application/pdf" />
-    <div id="pdf-controls" class="hidden">
-      <button id="add-text-btn" class="btn">Add Text</button>
-      <button id="save-btn" class="btn primary">Save PDF</button>
-    </div>
-    <div id="editor-container">
+    <h1>Minimal PDF Editor</h1>
+    <input type="file" id="file-input" accept="application/pdf">
+    <div id="pdf-container">
       <canvas id="pdf-canvas"></canvas>
-      <canvas id="overlay-canvas"></canvas>
     </div>
+    <button id="download-btn" disabled>Download Annotated PDF</button>
+    <p>Click on the PDF to add a text annotation.</p>
   </div>
-
-  <!-- Libraries -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/pdf-lib/dist/pdf-lib.min.js"></script>
-  <!-- Main script -->
-  <script src="script.js"></script>
+  <script src="main.js"></script>
 </body>
 </html> 
