@@ -4,6 +4,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs
 // Global variables
 let pdfDoc = null;
 let pdfBytes = null;
+let originalPdfBytes = null; // Store original ArrayBuffer
 let currentPage = 1;
 let totalPages = 0;
 let scale = 1.5;
@@ -35,7 +36,13 @@ async function loadPDF(e) {
   
   try {
     // Read the file as ArrayBuffer
-    pdfBytes = await file.arrayBuffer();
+    const arrayBuffer = await file.arrayBuffer();
+    
+    // Clone the ArrayBuffer for later use with pdf-lib
+    originalPdfBytes = new Uint8Array(arrayBuffer.slice(0));
+    
+    // Use the buffer for PDF.js
+    pdfBytes = arrayBuffer;
     
     // Load the PDF with pdf.js
     const loadingTask = pdfjsLib.getDocument({ data: pdfBytes });
@@ -179,14 +186,14 @@ function drawTextOverlays() {
 
 // Save the PDF with text overlays
 async function savePDF() {
-  if (!pdfBytes) {
+  if (!originalPdfBytes) {
     alert('No PDF loaded');
     return;
   }
   
   try {
-    // Load the PDF with pdf-lib
-    const pdfDocLib = await PDFLib.PDFDocument.load(pdfBytes);
+    // Load the PDF with pdf-lib using the original bytes
+    const pdfDocLib = await PDFLib.PDFDocument.load(originalPdfBytes);
     const pages = pdfDocLib.getPages();
     
     // Process each page that has overlays
