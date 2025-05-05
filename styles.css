@@ -163,4 +163,35 @@ footer {
   margin-top: 16px;
   font-size: 0.8rem;
   color: #666;
+}
+
+/* Overlay and annotation styles */
+.viewer-container {
+  position: relative;
+}
+#overlayContainer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+.annotation {
+  position: absolute;
+  background-color: rgba(255, 255, 255, 0.7);
+  padding: 2px 4px;
+  border: 1px dashed transparent;
+  cursor: move;
+  pointer-events: auto;
+  user-select: none;
+  white-space: nowrap;
+}
+.annotation.selected {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 4px var(--primary-hover);
+}
+
+/* Coordinate inputs */
+#xCoordInput,
+#yCoordInput {
+  width: 80px;
 } 

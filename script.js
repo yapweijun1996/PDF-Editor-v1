@@ -15,6 +15,17 @@ let currentPage = 1;
 let totalPages = 0;
 let zoomLevel = 1;
 let currentViewport = null;  // PDF.js viewport for current page
+const overlayContainer = document.getElementById('overlayContainer');
+let annotations = []; // annotation list
+let selectedAnno = null;
+let dragOffset = { x: 0, y: 0 };
+
+// Map fontSelect value to CSS font-family
+const fontMap = {
+  Helvetica: 'Helvetica, Arial, sans-serif',
+  TimesRoman: 'Times New Roman, Times, serif',
+  Courier: 'Courier New, Courier, monospace',
+};
 
 // DOM elements
 const fileInput = document.getElementById('fileInput');
@@ -96,6 +107,37 @@ async function renderPage() {
   const renderContext = { canvasContext: ctx, viewport };
   await page.render(renderContext).promise;
   pageNumberInput.value = currentPage;
+  // Render overlay annotations
+  renderAnnotations();
+}
+
+// Render annotations for current page
+function renderAnnotations() {
+  overlayContainer.innerHTML = '';
+  overlayContainer.style.width = canvas.width + 'px';
+  overlayContainer.style.height = canvas.height + 'px';
+  annotations
+    .filter(a => a.page === currentPage)
+    .forEach(a => {
+      const el = document.createElement('div');
+      el.className = 'annotation';
+      el.dataset.id = a.id;
+      el.innerText = a.text;
+      // Style
+      el.style.position = 'absolute';
+      const left = a.x * zoomLevel;
+      const top = (currentViewport.height - a.y) * zoomLevel;
+      el.style.left = `${left}px`;
+      el.style.top = `${top}px`;
+      el.style.fontFamily = fontMap[a.fontName] || fontMap.Helvetica;
+      el.style.fontSize = `${a.size}pt`;
+      el.style.color = a.color;
+      el.style.cursor = 'move';
+      el.style.pointerEvents = 'auto';
+      // Drag events
+      el.addEventListener('mousedown', annotationMouseDown);
+      overlayContainer.appendChild(el);
+    });
 }
 
 // Handle file input change
@@ -152,49 +194,73 @@ canvas.addEventListener('click', async (e) => {
   if (!pdfDoc) return alert('Load a PDF first.');
   const text = textInput.value.trim();
   if (!text) return alert('Enter text to add.');
-
-  // Determine font
+  // styling
   const fontName = fontSelect.value;
-  let fontConst = StandardFonts.Helvetica;
-  if (fontName==='TimesRoman') fontConst=StandardFonts.TimesRoman;
-  else if (fontName==='Courier') fontConst=StandardFonts.Courier;
-
-  // Size and color
   const size = parseFloat(sizeInput.value);
-  if (isNaN(size)||size<=0) return alert('Invalid font size');
+  if (isNaN(size) || size <= 0) return alert('Invalid font size');
   const hex = colorInput.value;
-  const r=parseInt(hex.slice(1,3),16)/255;
-  const g=parseInt(hex.slice(3,5),16)/255;
-  const b=parseInt(hex.slice(5,7),16)/255;
-  const color = rgb(r,g,b);
-
-  // Get click coords
+  const color = hex;
+  // coords
   const rect = canvas.getBoundingClientRect();
   const xPx = e.clientX - rect.left;
   const yPx = e.clientY - rect.top;
-  const x = xPx/zoomLevel;
-  const y = (currentViewport.height - yPx)/zoomLevel;
-
-  // Embed font and measure
-  const pdfFont = await pdfDoc.embedFont(fontConst);
-  let tx = x;
-  if (alignSelect.value==='center') {
-    const textWidth = pdfFont.widthOfTextAtSize(text,size);
-    tx = x - textWidth/2;
-  } else if (alignSelect.value==='right') {
-    const textWidth = pdfFont.widthOfTextAtSize(text,size);
-    tx = x - textWidth;
-  }
-
-  // Draw text
-  const page = pdfDoc.getPages()[currentPage-1];
-  page.drawText(text, { x: tx, y, size, font: pdfFont, color });
-
-  // Update history and re-render
-  await pushHistory();
-  pdfjsDoc = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
-  await renderPage();
+  const x = xPx / zoomLevel;
+  const y = (currentViewport.height - yPx) / zoomLevel;
+  // create annotation object
+  const anno = {
+    id: Date.now() + '_' + Math.random(),
+    page: currentPage,
+    text,
+    fontName,
+    size,
+    color,
+    align: alignSelect.value,
+    x,
+    y,
+  };
+  annotations.push(anno);
+  // update coord inputs
+  document.getElementById('xCoordInput').value = x.toFixed(2);
+  document.getElementById('yCoordInput').value = y.toFixed(2);
+  // render overlay
+  renderAnnotations();
 });
+
+// Drag handlers
+function annotationMouseDown(e) {
+  const id = e.currentTarget.dataset.id;
+  selectedAnno = annotations.find(a => a.id === id);
+  dragOffset.x = e.clientX - e.currentTarget.offsetLeft;
+  dragOffset.y = e.clientY - e.currentTarget.offsetTop;
+  e.currentTarget.classList.add('selected');
+  document.addEventListener('mousemove', annotationMouseMove);
+  document.addEventListener('mouseup', annotationMouseUp);
+}
+function annotationMouseMove(e) {
+  if (!selectedAnno) return;
+  const el = overlayContainer.querySelector(`[data-id="${selectedAnno.id}"]`);
+  let left = e.clientX - dragOffset.x;
+  let top = e.clientY - dragOffset.y;
+  // clamp bounds
+  left = Math.max(0, Math.min(left, canvas.width - el.offsetWidth));
+  top = Math.max(0, Math.min(top, canvas.height - el.offsetHeight));
+  el.style.left = `${left}px`;
+  el.style.top = `${top}px`;
+  // update PDF coords
+  const x = left / zoomLevel;
+  const y = (currentViewport.height - top / zoomLevel);
+  selectedAnno.x = x;
+  selectedAnno.y = y;
+  document.getElementById('xCoordInput').value = x.toFixed(2);
+  document.getElementById('yCoordInput').value = y.toFixed(2);
+}
+function annotationMouseUp(e) {
+  const el = overlayContainer.querySelector(`[data-id="${selectedAnno.id}"]`);
+  el.classList.remove('selected');
+  selectedAnno = null;
+  document.removeEventListener('mousemove', annotationMouseMove);
+  document.removeEventListener('mouseup', annotationMouseUp);
+}
 
 // Undo
 undoBtn.addEventListener('click', async () => {
@@ -225,13 +291,36 @@ redoBtn.addEventListener('click', async () => {
   await renderPage();
 });
 
-// Download PDF
+// Save PDF including annotations
 downloadBtn.addEventListener('click', async () => {
   if (!pdfBytes) return alert('Load a PDF first.');
-  const blob = new Blob([pdfBytes],{ type:'application/pdf' });
+  const saveDoc = await PDFDocument.load(pdfBytes);
+  for (const a of annotations) {
+    const page = saveDoc.getPages()[a.page - 1];
+    let fontConst = StandardFonts.Helvetica;
+    if (a.fontName === 'TimesRoman') fontConst = StandardFonts.TimesRoman;
+    if (a.fontName === 'Courier') fontConst = StandardFonts.Courier;
+    const pdfFont = await saveDoc.embedFont(fontConst);
+    // parse color
+    const hex = a.color;
+    const r = parseInt(hex.slice(1, 3), 16) / 255;
+    const g = parseInt(hex.slice(3, 5), 16) / 255;
+    const b = parseInt(hex.slice(5, 7), 16) / 255;
+    page.drawText(a.text, {
+      x: a.x,
+      y: a.y,
+      size: a.size,
+      font: pdfFont,
+      color: rgb(r, g, b),
+    });
+  }
+  const bytes = await saveDoc.save();
+  const blob = new Blob([bytes], { type: 'application/pdf' });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'edited.pdf'; a.click();
+  const aLink = document.createElement('a');
+  aLink.href = url;
+  aLink.download = 'edited.pdf';
+  aLink.click();
   URL.revokeObjectURL(url);
 });
 
