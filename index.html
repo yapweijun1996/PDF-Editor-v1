@@ -3,46 +3,37 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PDF Editor (HTML/CSS/JS Only)</title>
+  <title>Simple PDF Editor</title>
   <link rel="stylesheet" href="style.css">
-  <!-- PDF.js CDN -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <!-- pdf-lib CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/pdf-lib/dist/pdf-lib.min.js"></script>
 </head>
 <body>
   <div class="container">
     <h1>PDF Editor</h1>
-    <div class="toolbar">
-      <button id="tool-draw">Draw</button>
-      <button id="tool-signature">Add Signature</button>
-      <button id="tool-text">Add Text</button>
-      <button id="tool-date">Add Date</button>
-      <button id="tool-select">Select/Move</button>
+    
+    <div class="upload-container">
+      <input type="file" id="file-input" accept="application/pdf" />
+      <label for="file-input" class="upload-btn">Choose PDF File</label>
     </div>
-    <input type="file" id="pdf-upload" accept="application/pdf">
-    <div id="pdf-container">
-      <canvas id="pdf-canvas"></canvas>
-      <canvas id="annotation-canvas"></canvas>
-    </div>
-    <div class="page-nav">
-      <button id="prev-page">Prev</button>
-      <span id="page-info">Page 1</span>
-      <button id="next-page">Next</button>
-    </div>
-    <button id="export-btn">Export Annotated PDF</button>
-    <div id="signature-modal" class="modal">
-      <div class="modal-content">
-        <h2>Draw your signature</h2>
-        <canvas id="signature-canvas" width="300" height="100"></canvas>
-        <div>
-          <button id="clear-signature">Clear</button>
-          <button id="save-signature">Save</button>
-          <button id="close-signature">Cancel</button>
-        </div>
+    
+    <div id="pdf-controls" class="hidden">
+      <div class="toolbar">
+        <button id="add-text-btn" class="btn">Add Text</button>
+        <button id="prev-page" class="btn">Previous</button>
+        <span id="page-num">Page: 1 / 1</span>
+        <button id="next-page" class="btn">Next</button>
+        <button id="save-btn" class="btn primary">Save PDF</button>
+      </div>
+      
+      <div id="editor-container">
+        <canvas id="pdf-canvas"></canvas>
+        <canvas id="overlay-canvas"></canvas>
       </div>
     </div>
   </div>
+
+  <!-- Scripts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib/dist/pdf-lib.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html> 

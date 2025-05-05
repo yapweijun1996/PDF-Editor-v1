@@ -1,104 +1,112 @@
-.container {
-  max-width: 800px;
-  margin: 40px auto;
+/* Basic reset */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  line-height: 1.6;
+  color: #333;
+  background-color: #f5f5f5;
   padding: 20px;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  text-align: center;
 }
-#pdf-container {
-  position: relative;
-  display: inline-block;
-}
-#pdf-canvas, #annotation-canvas {
-  display: block;
+
+.container {
+  max-width: 1000px;
   margin: 0 auto;
-  background: #f0f0f0;
-  border: 1px solid #ccc;
+  background-color: white;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 20px;
 }
-#pdf-canvas {
-  z-index: 1;
+
+h1 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #2c3e50;
 }
-#annotation-canvas {
+
+.upload-container {
+  text-align: center;
+  margin: 20px 0;
+}
+
+#file-input {
+  display: none;
+}
+
+.upload-btn {
+  display: inline-block;
+  background-color: #3498db;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.upload-btn:hover {
+  background-color: #2980b9;
+}
+
+.hidden {
+  display: none;
+}
+
+.toolbar {
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 8px 15px;
+  background-color: #ecf0f1;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.btn:hover {
+  background-color: #dde4e6;
+}
+
+.btn.primary {
+  background-color: #2ecc71;
+  color: white;
+}
+
+.btn.primary:hover {
+  background-color: #27ae60;
+}
+
+#page-num {
+  margin: 0 10px;
+}
+
+#editor-container {
+  position: relative;
+  margin: 0 auto;
+  display: flex;
+  justify-content: center;
+}
+
+#pdf-canvas, #overlay-canvas {
+  border: 1px solid #ddd;
   position: absolute;
   left: 0;
   top: 0;
-  pointer-events: auto;
+}
+
+#pdf-canvas {
+  z-index: 1;
+}
+
+#overlay-canvas {
   z-index: 2;
-}
-#export-btn {
-  margin-top: 20px;
-  padding: 10px 24px;
-  font-size: 16px;
-  border: none;
-  background: #007bff;
-  color: #fff;
-  border-radius: 4px;
-  cursor: pointer;
-}
-#export-btn:hover {
-  background: #0056b3;
-}
-.toolbar {
-  margin-bottom: 16px;
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-}
-.toolbar button {
-  padding: 8px 16px;
-  font-size: 15px;
-  border: 1px solid #ccc;
-  background: #f8f8f8;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.toolbar button.active, .toolbar button:hover {
-  background: #007bff;
-  color: #fff;
-}
-.page-nav {
-  margin: 12px 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 10px;
-}
-.page-nav button {
-  padding: 6px 14px;
-  font-size: 14px;
-  border: 1px solid #ccc;
-  background: #f8f8f8;
-  border-radius: 4px;
-  cursor: pointer;
-}
-#page-info {
-  font-weight: bold;
-}
-.modal {
-  display: none;
-  position: fixed;
-  z-index: 1000;
-  left: 0; top: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.4);
-  justify-content: center;
-  align-items: center;
-}
-.modal.active {
-  display: flex;
-}
-.modal-content {
-  background: #fff;
-  padding: 24px;
-  border-radius: 8px;
-  box-shadow: 0 2px 16px rgba(0,0,0,0.2);
-  text-align: center;
-}
-#signature-canvas {
-  border: 1px solid #ccc;
-  background: #fafafa;
-  margin-bottom: 12px;
-  border-radius: 4px;
 } 

@@ -1,253 +1,226 @@
-// PDF.js setup
-const pdfjsLib = window['pdfjs-dist/build/pdf'];
+// Initialize the PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-const pdfUpload = document.getElementById('pdf-upload');
+// Global variables
+let pdfDoc = null;
+let pdfBytes = null;
+let currentPage = 1;
+let totalPages = 0;
+let scale = 1.5;
+let textOverlays = {}; // Object to store text overlays for each page
+let addingText = false;
+
+// DOM Elements
+const fileInput = document.getElementById('file-input');
 const pdfCanvas = document.getElementById('pdf-canvas');
-const annotationCanvas = document.getElementById('annotation-canvas');
-const exportBtn = document.getElementById('export-btn');
-const pdfContainer = document.getElementById('pdf-container');
+const overlayCanvas = document.getElementById('overlay-canvas');
+const addTextBtn = document.getElementById('add-text-btn');
+const saveBtn = document.getElementById('save-btn');
 const prevPageBtn = document.getElementById('prev-page');
 const nextPageBtn = document.getElementById('next-page');
-const pageInfo = document.getElementById('page-info');
-const toolbarBtns = document.querySelectorAll('.toolbar button');
-const signatureModal = document.getElementById('signature-modal');
-const signatureCanvas = document.getElementById('signature-canvas');
-const clearSignatureBtn = document.getElementById('clear-signature');
-const saveSignatureBtn = document.getElementById('save-signature');
-const closeSignatureBtn = document.getElementById('close-signature');
+const pageNumDisplay = document.getElementById('page-num');
+const pdfControls = document.getElementById('pdf-controls');
 
-let pdfDoc = null;
-let currentPage = 1;
-let scale = 1.5;
-let pdfData = null;
-let numPages = 1;
-let activeTool = 'draw';
-let signatureImage = null;
+// Event Listeners
+fileInput.addEventListener('change', loadPDF);
+addTextBtn.addEventListener('click', startAddText);
+saveBtn.addEventListener('click', savePDF);
+prevPageBtn.addEventListener('click', showPrevPage);
+nextPageBtn.addEventListener('click', showNextPage);
 
-// Store annotation image data per page
-const annotationData = {};
-
-// Drawing state
-let drawing = false;
-let lastX = 0, lastY = 0;
-const annotationCtx = annotationCanvas.getContext('2d');
-
-// Toolbar logic
-function setActiveTool(tool) {
-  activeTool = tool;
-  toolbarBtns.forEach(btn => {
-    btn.classList.toggle('active', btn.id === 'tool-' + tool);
-  });
-}
-toolbarBtns.forEach(btn => {
-  btn.addEventListener('click', () => {
-    const tool = btn.id.replace('tool-', '');
-    setActiveTool(tool);
-    if (tool === 'signature') {
-      openSignatureModal();
-    }
-  });
-});
-setActiveTool('draw');
-
-// Load PDF and render first page
-pdfUpload.addEventListener('change', async (e) => {
+// Load PDF from file input
+async function loadPDF(e) {
   const file = e.target.files[0];
   if (!file) return;
-  if (file.type !== 'application/pdf') {
-    alert('Please upload a valid PDF file.');
-    pdfUpload.value = '';
-    return;
-  }
-  const reader = new FileReader();
-  reader.onload = async function(event) {
-    pdfData = new Uint8Array(event.target.result);
-    try {
-      pdfDoc = await pdfjsLib.getDocument({data: pdfData}).promise;
-    } catch (err) {
-      alert('Failed to load PDF. The file may be corrupted or not a valid PDF.');
-      pdfUpload.value = '';
-      return;
-    }
-    numPages = pdfDoc.numPages;
-    currentPage = 1;
-    setActiveTool('draw');
-    renderPage(currentPage);
-  };
-  reader.readAsArrayBuffer(file);
-});
-
-async function renderPage(num) {
-  const page = await pdfDoc.getPage(num);
-  const viewport = page.getViewport({ scale });
-  pdfCanvas.width = viewport.width;
-  pdfCanvas.height = viewport.height;
-  annotationCanvas.width = viewport.width;
-  annotationCanvas.height = viewport.height;
-  annotationCanvas.style.width = pdfCanvas.style.width = viewport.width + 'px';
-  annotationCanvas.style.height = pdfCanvas.style.height = viewport.height + 'px';
-
-  // Render PDF page
-  const renderContext = {
-    canvasContext: pdfCanvas.getContext('2d'),
-    viewport: viewport
-  };
-  await page.render(renderContext).promise;
-
-  // Restore annotation for this page if exists
-  annotationCtx.clearRect(0, 0, annotationCanvas.width, annotationCanvas.height);
-  if (annotationData[num]) {
-    const img = new window.Image();
-    img.onload = () => annotationCtx.drawImage(img, 0, 0);
-    img.src = annotationData[num];
-  }
-  updatePageInfo();
-}
-
-function updatePageInfo() {
-  pageInfo.textContent = `Page ${currentPage} / ${numPages}`;
-  prevPageBtn.disabled = currentPage === 1;
-  nextPageBtn.disabled = currentPage === numPages;
-}
-
-prevPageBtn.addEventListener('click', () => {
-  saveCurrentAnnotation();
-  if (currentPage > 1) {
-    currentPage--;
-    renderPage(currentPage);
-  }
-});
-nextPageBtn.addEventListener('click', () => {
-  saveCurrentAnnotation();
-  if (currentPage < numPages) {
-    currentPage++;
-    renderPage(currentPage);
-  }
-});
-
-function saveCurrentAnnotation() {
-  annotationData[currentPage] = annotationCanvas.toDataURL('image/png');
-}
-
-// Drawing on annotation canvas (only if draw tool is active)
-annotationCanvas.addEventListener('mousedown', (e) => {
-  if (!pdfDoc) {
-    alert('Please upload and load a PDF before drawing.');
-    return;
-  }
-  if (activeTool !== 'draw') return;
-  drawing = true;
-  [lastX, lastY] = getCanvasCoords(e);
-});
-annotationCanvas.addEventListener('mousemove', (e) => {
-  if (!drawing || activeTool !== 'draw') return;
-  const [x, y] = getCanvasCoords(e);
-  annotationCtx.strokeStyle = '#FF0000';
-  annotationCtx.lineWidth = 2;
-  annotationCtx.lineCap = 'round';
-  annotationCtx.beginPath();
-  annotationCtx.moveTo(lastX, lastY);
-  annotationCtx.lineTo(x, y);
-  annotationCtx.stroke();
-  [lastX, lastY] = [x, y];
-});
-annotationCanvas.addEventListener('mouseup', () => drawing = false);
-annotationCanvas.addEventListener('mouseleave', () => drawing = false);
-
-function getCanvasCoords(e) {
-  const rect = annotationCanvas.getBoundingClientRect();
-  return [
-    (e.clientX - rect.left) * (annotationCanvas.width / rect.width),
-    (e.clientY - rect.top) * (annotationCanvas.height / rect.height)
-  ];
-}
-
-// Signature modal logic
-function openSignatureModal() {
-  signatureModal.classList.add('active');
-  clearSignatureCanvas();
-}
-function closeSignatureModal() {
-  signatureModal.classList.remove('active');
-}
-closeSignatureBtn.addEventListener('click', closeSignatureModal);
-
-// Signature drawing logic
-const sigCtx = signatureCanvas.getContext('2d');
-let sigDrawing = false, sigLastX = 0, sigLastY = 0;
-signatureCanvas.addEventListener('mousedown', (e) => {
-  sigDrawing = true;
-  [sigLastX, sigLastY] = getSigCanvasCoords(e);
-});
-signatureCanvas.addEventListener('mousemove', (e) => {
-  if (!sigDrawing) return;
-  const [x, y] = getSigCanvasCoords(e);
-  sigCtx.strokeStyle = '#222';
-  sigCtx.lineWidth = 2;
-  sigCtx.lineCap = 'round';
-  sigCtx.beginPath();
-  sigCtx.moveTo(sigLastX, sigLastY);
-  sigCtx.lineTo(x, y);
-  sigCtx.stroke();
-  [sigLastX, sigLastY] = [x, y];
-});
-signatureCanvas.addEventListener('mouseup', () => sigDrawing = false);
-signatureCanvas.addEventListener('mouseleave', () => sigDrawing = false);
-function getSigCanvasCoords(e) {
-  const rect = signatureCanvas.getBoundingClientRect();
-  return [
-    (e.clientX - rect.left) * (signatureCanvas.width / rect.width),
-    (e.clientY - rect.top) * (signatureCanvas.height / rect.height)
-  ];
-}
-function clearSignatureCanvas() {
-  sigCtx.clearRect(0, 0, signatureCanvas.width, signatureCanvas.height);
-}
-clearSignatureBtn.addEventListener('click', clearSignatureCanvas);
-
-saveSignatureBtn.addEventListener('click', () => {
-  signatureImage = signatureCanvas.toDataURL('image/png');
-  closeSignatureModal();
-  // TODO: Allow user to place signature on PDF
-});
-
-// Export annotated PDF (all pages)
-exportBtn.addEventListener('click', async () => {
-  if (!pdfDoc) return alert('Please upload a PDF first.');
-  saveCurrentAnnotation();
-  const { PDFDocument } = window.PDFLib;
-  let pdfDocLib;
+  
   try {
-    pdfDocLib = await PDFDocument.load(pdfData);
-  } catch (err) {
-    alert('Failed to parse PDF for export. The file may be corrupted or not a valid PDF.');
+    // Read the file as ArrayBuffer
+    pdfBytes = await file.arrayBuffer();
+    
+    // Load the PDF with pdf.js
+    const loadingTask = pdfjsLib.getDocument({ data: pdfBytes });
+    pdfDoc = await loadingTask.promise;
+    
+    // Initialize variables
+    totalPages = pdfDoc.numPages;
+    currentPage = 1;
+    textOverlays = {}; // Reset text overlays
+    
+    // Display controls
+    pdfControls.classList.remove('hidden');
+    
+    // Update page display
+    updatePageDisplay();
+    
+    // Render the first page
+    renderPage(currentPage);
+  } catch (error) {
+    console.error('Error loading PDF:', error);
+    alert('Error loading PDF. Please try another file.');
+  }
+}
+
+// Render a specific page of the PDF
+async function renderPage(pageNum) {
+  try {
+    // Get the page
+    const page = await pdfDoc.getPage(pageNum);
+    
+    // Get the viewport at the desired scale
+    const viewport = page.getViewport({ scale });
+    
+    // Set canvas dimensions to match the viewport
+    pdfCanvas.width = viewport.width;
+    pdfCanvas.height = viewport.height;
+    overlayCanvas.width = viewport.width;
+    overlayCanvas.height = viewport.height;
+    
+    // Render the PDF page on the canvas
+    const renderContext = {
+      canvasContext: pdfCanvas.getContext('2d'),
+      viewport: viewport
+    };
+    
+    await page.render(renderContext).promise;
+    
+    // Draw any existing text overlays for this page
+    drawTextOverlays();
+  } catch (error) {
+    console.error('Error rendering page:', error);
+  }
+}
+
+// Show previous page
+function showPrevPage() {
+  if (currentPage <= 1) return;
+  currentPage--;
+  updatePageDisplay();
+  renderPage(currentPage);
+}
+
+// Show next page
+function showNextPage() {
+  if (currentPage >= totalPages) return;
+  currentPage++;
+  updatePageDisplay();
+  renderPage(currentPage);
+}
+
+// Update the page number display
+function updatePageDisplay() {
+  pageNumDisplay.textContent = `Page: ${currentPage} / ${totalPages}`;
+  
+  // Enable/disable navigation buttons
+  prevPageBtn.disabled = currentPage <= 1;
+  nextPageBtn.disabled = currentPage >= totalPages;
+}
+
+// Start adding text process
+function startAddText() {
+  addingText = true;
+  overlayCanvas.style.pointerEvents = 'auto'; // Make overlay clickable
+  overlayCanvas.addEventListener('click', handleCanvasClick);
+}
+
+// Handle click on canvas for text placement
+function handleCanvasClick(e) {
+  if (!addingText) return;
+  
+  // Get click coordinates relative to the canvas
+  const rect = overlayCanvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  
+  // Prompt for text
+  const text = prompt("Enter text to add:");
+  
+  if (text) {
+    // Initialize the page's overlay array if it doesn't exist
+    if (!textOverlays[currentPage]) {
+      textOverlays[currentPage] = [];
+    }
+    
+    // Add the text to overlays
+    textOverlays[currentPage].push({
+      text: text,
+      x: x,
+      y: y,
+      fontSize: 20,
+      color: '#FF0000'
+    });
+    
+    // Redraw overlays
+    drawTextOverlays();
+  }
+  
+  // Reset state
+  addingText = false;
+  overlayCanvas.style.pointerEvents = 'none';
+  overlayCanvas.removeEventListener('click', handleCanvasClick);
+}
+
+// Draw text overlays for the current page
+function drawTextOverlays() {
+  const ctx = overlayCanvas.getContext('2d');
+  
+  // Clear the overlay canvas
+  ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+  
+  // If no overlays for this page, return
+  if (!textOverlays[currentPage]) return;
+  
+  // Draw each text overlay
+  textOverlays[currentPage].forEach(overlay => {
+    ctx.font = `${overlay.fontSize}px Arial`;
+    ctx.fillStyle = overlay.color;
+    ctx.fillText(overlay.text, overlay.x, overlay.y);
+  });
+}
+
+// Save the PDF with text overlays
+async function savePDF() {
+  if (!pdfBytes) {
+    alert('No PDF loaded');
     return;
   }
-  for (let i = 0; i < pdfDocLib.getPageCount(); i++) {
-    const page = pdfDocLib.getPage(i);
-    const pageNum = i + 1;
-    if (annotationData[pageNum]) {
-      const pngImage = await pdfDocLib.embedPng(annotationData[pageNum]);
-      const { width, height } = page.getSize();
-      page.drawImage(pngImage, {
-        x: 0,
-        y: 0,
-        width,
-        height,
-      });
+  
+  try {
+    // Load the PDF with pdf-lib
+    const pdfDocLib = await PDFLib.PDFDocument.load(pdfBytes);
+    const pages = pdfDocLib.getPages();
+    
+    // Process each page that has overlays
+    for (const pageNum in textOverlays) {
+      if (textOverlays.hasOwnProperty(pageNum)) {
+        const pageIdx = parseInt(pageNum) - 1; // Convert to 0-based index
+        const page = pages[pageIdx];
+        
+        // Apply each text overlay to the page
+        textOverlays[pageNum].forEach(overlay => {
+          // Note: pdf-lib uses bottom-left as origin, so we need to flip y-coordinate
+          page.drawText(overlay.text, {
+            x: overlay.x,
+            y: page.getHeight() - overlay.y, // Flip y-coordinate
+            size: overlay.fontSize,
+            color: PDFLib.rgb(1, 0, 0) // Red color
+          });
+        });
+      }
     }
+    
+    // Save the modified PDF
+    const modifiedPdfBytes = await pdfDocLib.save();
+    
+    // Create a Blob from the PDF bytes
+    const blob = new Blob([modifiedPdfBytes], { type: 'application/pdf' });
+    
+    // Create a download link and trigger download
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'edited-pdf.pdf';
+    link.click();
+  } catch (error) {
+    console.error('Error saving PDF:', error);
+    alert('Error saving PDF. Please try again.');
   }
-  const pdfBytes = await pdfDocLib.save();
-  download(pdfBytes, 'annotated.pdf', 'application/pdf');
-});
-
-function download(data, filename, type) {
-  const blob = new Blob([data], { type });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
 } 
