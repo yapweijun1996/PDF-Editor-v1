@@ -81,9 +81,10 @@ function createTextElement(text, x, y, fontSize, color) {
   textEl.setAttribute('class', 'text-element');
   textEl.textContent = text;
   svgOverlay.appendChild(textEl);
+  // Store text info for PDF mapping
   textElements.push({ textEl, x, y, fontSize, color, text });
   textEl.addEventListener('mousedown', textMouseDown);
-  textEl.addEventListener('click', (ev) => {
+  textEl.addEventListener('click', ev => {
     ev.stopPropagation();
     selectTextElement(textEl);
   });
@@ -165,17 +166,38 @@ function getSVGPoint(evt) {
   };
 }
 
+// Save the PDF using pdf-lib
 async function savePDF() {
-  // Capture the editor container as an image
-  const canvasSnap = await html2canvas(editorContainer, {
-    backgroundColor: '#fff',
-    useCORS: true,
-    scale: 1
+  if (!originalPdfBytes) {
+    alert('No PDF loaded');
+    return;
+  }
+  const pdfDoc = await PDFLib.PDFDocument.load(originalPdfBytes);
+  const helveticaFont = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+  const page = pdfDoc.getPages()[0];
+  const pdfW = page.getWidth();
+  const pdfH = page.getHeight();
+  const svgW = svgOverlay.width.baseVal.value;
+  const svgH = svgOverlay.height.baseVal.value;
+
+  textElements.forEach(t => {
+    // Map canvas/SVG coordinates to PDF coordinates
+    const pdfX = t.x * (pdfW / svgW);
+    const pdfY = pdfH - t.y * (pdfH / svgH);
+    const pdfFontSize = t.fontSize * (pdfH / svgH);
+    page.drawText(t.text, {
+      x: pdfX,
+      y: pdfY,
+      size: pdfFontSize,
+      font: helveticaFont,
+      color: PDFLib.rgb(0.83, 0.18, 0.18)
+    });
   });
-  const imgData = canvasSnap.toDataURL('image/png');
-  // Create PDF with jsPDF (unit in px matches canvas pixels)
-  const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF({ unit: 'px', format: [canvasSnap.width, canvasSnap.height] });
-  pdf.addImage(imgData, 'PNG', 0, 0, canvasSnap.width, canvasSnap.height);
-  pdf.save('edited.pdf');
+
+  const newPdfBytes = await pdfDoc.save();
+  const blob = new Blob([newPdfBytes], { type: 'application/pdf' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'edited.pdf';
+  link.click();
 } 
