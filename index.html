@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF Editor (HTML/CSS/JS Only)</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- PDF.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <!-- pdf-lib CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib/dist/pdf-lib.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h1>PDF Editor</h1>
+    <input type="file" id="pdf-upload" accept="application/pdf">
+    <div id="pdf-container">
+      <canvas id="pdf-canvas"></canvas>
+      <canvas id="annotation-canvas"></canvas>
+    </div>
+    <button id="export-btn">Export Annotated PDF</button>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html> 

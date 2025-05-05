@@ -1,0 +1,38 @@
+.container {
+  max-width: 800px;
+  margin: 40px auto;
+  padding: 20px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  text-align: center;
+}
+#pdf-container {
+  position: relative;
+  display: inline-block;
+}
+#pdf-canvas, #annotation-canvas {
+  display: block;
+  margin: 0 auto;
+  background: #f0f0f0;
+  border: 1px solid #ccc;
+}
+#annotation-canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: auto;
+}
+#export-btn {
+  margin-top: 20px;
+  padding: 10px 24px;
+  font-size: 16px;
+  border: none;
+  background: #007bff;
+  color: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+}
+#export-btn:hover {
+  background: #0056b3;
+} 
