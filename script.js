@@ -10,6 +10,7 @@ let totalPages = 0;
 let scale = 1.5;
 let textOverlays = {}; // Object to store text overlays for each page
 let addingText = false;
+let pdfPageSizes = {}; // Store PDF page size for current page
 
 // DOM Elements
 const fileInput = document.getElementById('file-input');
@@ -75,6 +76,9 @@ async function renderPage(pageNum) {
     
     // Get the viewport at the desired scale
     const viewport = page.getViewport({ scale });
+    
+    // Store the actual PDF page size for this page
+    pdfPageSizes[pageNum] = { width: page.view[2], height: page.view[3] };
     
     // Set canvas dimensions to match the viewport
     pdfCanvas.width = viewport.width;
@@ -201,15 +205,17 @@ async function savePDF() {
       if (textOverlays.hasOwnProperty(pageNum)) {
         const pageIdx = parseInt(pageNum) - 1; // Convert to 0-based index
         const page = pages[pageIdx];
-        const pageHeight = page.getHeight();
+        const pdfPageWidth = page.getWidth();
+        const pdfPageHeight = page.getHeight();
+        const canvasWidth = pdfCanvas.width;
+        const canvasHeight = pdfCanvas.height;
         // Apply each text overlay to the page
         textOverlays[pageNum].forEach(overlay => {
-          // Adjust for scale
-          const pdfX = overlay.x / scale;
-          const pdfFontSize = overlay.fontSize / scale;
-          // Adjust y for scale and baseline (canvas y is top, PDF y is bottom)
-          // Canvas draws text with baseline at y, PDF draws from bottom left, so we subtract font size for better alignment
-          const pdfY = pageHeight - (overlay.y / scale) - pdfFontSize * 0.2;
+          // Robust mapping from canvas to PDF coordinates and font size
+          const pdfX = overlay.x * (pdfPageWidth / canvasWidth);
+          const pdfFontSize = overlay.fontSize * (pdfPageHeight / canvasHeight);
+          // Canvas y is from top, PDF y is from bottom
+          const pdfY = pdfPageHeight - overlay.y * (pdfPageHeight / canvasHeight) - pdfFontSize * 0.2;
           page.drawText(overlay.text, {
             x: pdfX,
             y: pdfY,
