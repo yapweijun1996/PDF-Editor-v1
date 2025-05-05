@@ -2,295 +2,278 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PDF Merger</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f7f7f7;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      margin: 0;
-    }
-    .container {
-      background: #fff;
-      padding: 2rem 2.5rem;
-      border-radius: 10px;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 1.5rem;
-      min-width: 350px;
-    }
-    .file-list {
-      width: 100%;
-      margin-bottom: 1rem;
-      list-style: none;
-      padding: 0;
-    }
-    .file-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: #f1f3f6;
-      border-radius: 5px;
-      margin-bottom: 0.5rem;
-      padding: 0.5rem 0.75rem;
-      gap: 0.5rem;
-    }
-    .file-name {
-      flex: 1;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .file-actions button {
-      margin-left: 0.25rem;
-      background: #e0e7ef;
-      color: #333;
-      border: none;
-      border-radius: 3px;
-      padding: 0.25rem 0.5rem;
-      cursor: pointer;
-      font-size: 0.95rem;
-      transition: background 0.2s;
-    }
-    .file-actions button:hover {
-      background: #b6d4fe;
-    }
-    button#merge {
-      padding: 0.5rem 1.5rem;
-      font-size: 1rem;
-      border: none;
-      border-radius: 5px;
-      background: #007bff;
-      color: #fff;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    button#merge:hover {
-      background: #0056b3;
-    }
-    #status {
-      color: #333;
-      font-size: 0.95rem;
-      min-height: 1.2em;
-    }
-    /* Modal styles */
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 1000;
-      left: 0;
-      top: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(0,0,0,0.4);
-      align-items: center;
-      justify-content: center;
-    }
-    .modal-content {
-      background: #fff;
-      padding: 1rem;
-      border-radius: 8px;
-      max-width: 90vw;
-      max-height: 90vh;
-      overflow: auto;
-      position: relative;
-    }
-    .modal-close {
-      position: absolute;
-      top: 0.5rem;
-      right: 0.5rem;
-      background: #e0e7ef;
-      border: none;
-      border-radius: 3px;
-      padding: 0.25rem 0.5rem;
-      cursor: pointer;
-      font-size: 1rem;
-    }
-    .modal-close:hover {
-      background: #b6d4fe;
-    }
-    #pdf-preview {
-      height: 85vh;
-      max-height: 95vh;
-      width: auto;
-      display: block;
-      margin: 0 auto;
-    }
-  </style>
+  <title>PDF Editor - pdf-lib Overview</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
 </head>
 <body>
-  <div class="container">
-    <h2>Merge PDF Files</h2>
-    <input type="file" id="pdfs" multiple accept="application/pdf">
-    <ul class="file-list" id="fileList"></ul>
-    <button id="merge">Merge PDFs</button>
-    <div id="status"></div>
-  </div>
-  <!-- Modal for PDF preview -->
-  <div class="modal" id="previewModal">
-    <div class="modal-content">
-      <button class="modal-close" id="closeModal">&times;</button>
-      <canvas id="pdf-preview"></canvas>
-    </div>
-  </div>
-  <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@latest/build/pdf.min.js"></script>
-  <script>
-    const input = document.getElementById('pdfs');
-    const mergeBtn = document.getElementById('merge');
-    const statusDiv = document.getElementById('status');
-    const fileList = document.getElementById('fileList');
-    const previewModal = document.getElementById('previewModal');
-    const closeModal = document.getElementById('closeModal');
-    const pdfPreview = document.getElementById('pdf-preview');
+  <header>
+    <h1>pdf-lib Overview</h1>
+    <p><em>pdf-lib is a JavaScript library for creating, modifying, and working with PDF documents. This index provides a quick reference to its core components.</em></p>
+  </header>
+  <main>
+    <section id="core-concepts">
+      <h2>1. Core Concepts</h2>
+      <ul>
+        <li><strong>PDFDocument</strong>: The central class representing an entire PDF document. You'll use this to create new PDFs or load existing ones.</li>
+        <li><strong>PDFPage</strong>: Represents a single page within a PDF document. You draw content onto pages.</li>
+        <li><strong>PDFFont</strong>: Represents a font used for rendering text.</li>
+        <li><strong>PDFImage</strong>: Represents an image embedded in the PDF.</li>
+        <li><strong>PDFForm</strong>: Represents the interactive form within the PDF.</li>
+        <li><strong>PDFField</strong>: Base class for all Form Fields.</li>
+      </ul>
+    </section>
+    <section id="enums">
+      <h2>2. Enums (Predefined Choices)</h2>
+      <ul>
+        <li><strong>BlendMode</strong>: How colors are blended together.</li>
+        <li><strong>ColorTypes</strong>: Defines the color type.</li>
+        <li><strong>Duplex</strong>: Printing options for double-sided printing.</li>
+        <li><strong>ImageAlignment</strong>: Defines the image alignment within its bounds.</li>
+        <li><strong>LineCapStyle</strong>: How the end of a line is drawn (e.g., rounded, square).</li>
+        <li><strong>LineJoinStyle</strong>: How lines are joined together (e.g., rounded, mitered).</li>
+        <li><strong>NonFullScreenPageMode</strong>: How the PDF viewer should display pages when not in full-screen mode.</li>
+        <li><strong>ParseSpeeds</strong>: Defines the speed at which the PDF is parsed.</li>
+        <li><strong>PrintScaling</strong>: Defines the way the PDF is scaled while being printed.</li>
+        <li><strong>ReadingDirection</strong>: Defines the direction the text is being read in.</li>
+        <li><strong>RotationTypes</strong>: Defines the rotation type.</li>
+        <li><strong>StandardFonts</strong>: A list of commonly available fonts (e.g., Helvetica, Times-Roman).</li>
+        <li><strong>TextAlignment</strong>: How text is aligned (e.g., left, center, right, justify).</li>
+        <li><strong>TextRenderingMode</strong>: Defines how the text is rendered.</li>
+      </ul>
+    </section>
+    <section id="classes">
+      <h2>3. Classes (Objects)</h2>
+      <ul>
+        <li><strong>PDFButton</strong>: Represents a button field in a PDF form.</li>
+        <li><strong>PDFCheckBox</strong>: Represents a checkbox field in a PDF form.</li>
+        <li><strong>PDFDropdown</strong>: Represents a dropdown field in a PDF form.</li>
+        <li><strong>PDFEmbeddedPage</strong>: Represents a page being embedded in another PDF.</li>
+        <li><strong>PDFOptionList</strong>: Represents an OptionList field in a PDF form.</li>
+        <li><strong>PDFRadioGroup</strong>: Represents a radiogroup field in a PDF form.</li>
+        <li><strong>PDFSignature</strong>: Represents a signature field in a PDF form.</li>
+        <li><strong>PDFTextField</strong>: Represents a text field in a PDF form.</li>
+        <li><strong>ViewerPreferences</strong>: Represents the Viewer Preferences.</li>
+      </ul>
+    </section>
+    <section id="interfaces">
+      <h2>4. Interfaces (Options & Configuration)</h2>
+      <pre>
+AttachmentOptions: Options related to attaching files to the PDF.
+Base64SaveOptions: Options related to saving PDFs to base 64.
+CMYK: Describes the CMYK color.
+CombedTextLayout: Describes the layout of combed text.
+CreateOptions: Options related to creating a PDF document.
+Degrees: Defines degrees.
+DrawLinesOfTextOptions: Options when drawing lines of text.
+DrawTextLinesOptions: Options related to drawing lines of text.
+DrawTextOptions: Options related to drawing text.
+EmbedFontOptions: Options when embedding a font.
+Embeddable: Defines PDFs that can be embedded.
+FieldAppearanceOptions: Options that modify the appearance of fields.
+FlattenOptions: Options related to flattening a PDF document.
+Grayscale: Describes the Grayscale color.
+LayoutBounds: Describes the bounds of a layout.
+LayoutCombedTextOptions: Options for layouting combed text.
+LayoutSinglelineTextOptions: Options for layouting single line text.
+LayoutTextOptions: Options for layouting text.
+LoadOptions: Options related to loading a PDF document.
+MultilineTextLayout: Describes the layout of multiline text.
+PDFPageDrawCircleOptions: Options for drawing a circle on a page.
+PDFPageDrawEllipseOptions: Options for drawing an ellipse on a page.
+PDFPageDrawImageOptions: Options for drawing an image on a page.
+PDFPageDrawLineOptions: Options for drawing a line on a page.
+PDFPageDrawPageOptions: Options for drawing a page in a page.
+PDFPageDrawRectangleOptions: Options for drawing a rectangle on a page.
+PDFPageDrawSVGOptions: Options for drawing an SVG path on a page.
+PDFPageDrawSquareOptions: Options for drawing a square on a page.
+PDFPageDrawTextOptions: Options for drawing text on a page.
+PageRange: Describes a range of pages.
+RGB: Describes the RGB color.
+Radians: Defines radians.
+SaveOptions: Options related to saving a PDF document.
+SetTitleOptions: Options related to setting the PDF Title.
+SinglelineTextLayout: Describes the layout of a single line of text.
+TextPosition: Describes the position of text.
+      </pre>
+    </section>
+    <section id="type-aliases">
+      <h2>5. Type Aliases</h2>
+      <pre>
+AppearanceMapping: Defines a mapping for appearances.
+AppearanceOrMapping: Defines the appearance as a single object or a mapping.
+AppearanceProviderFor: Defines the appearance provider for a specific field.
+BoolViewerPrefKey: Defines keys for boolean viewer preferences.
+ButtonAppearanceProvider: Type alias for the button appearance provider.
+CheckBoxAppearanceProvider: Type alias for the checkbox appearance provider.
+Color: Can be Grayscale, RGB, or CMYK.
+DropdownAppearanceProvider: Type alias for the dropdown appearance provider.
+FontEmbedder: Defines the font embedder.
+ImageEmbedder: Defines the image embedder.
+NameViewerPrefKey: Defines keys for name viewer preferences.
+OptionListAppearanceProvider: Type alias for the option list appearance provider.
+RadioGroupAppearanceProvider: Type alias for the radio group appearance provider.
+Rotation: Can be Radians or Degrees.
+SignatureAppearanceProvider: Type alias for the signature appearance provider.
+TextFieldAppearanceProvider: Type alias for the text field appearance provider.
+TransformationMatrix: A 6-element array representing a transformation matrix.
+      </pre>
+    </section>
+    <section id="variables">
+      <h2>6. Variables (Constants)</h2>
+      <pre>
+CMYK: The CMYK color.
+Degrees: The Degrees.
+Grayscale: The Grayscale color.
+KAPPA: Constant used for drawing Bezier curves.
+MAX_FONT_SIZE: Maximum font size.
+MIN_FONT_SIZE: Minimum font size.
+RGB: The RGB color.
+Radians: The Radians.
+colorRegex: Regex for identifying colors.
+cos: Cos function.
+identityMatrix: The identity transformation matrix (no change).
+sin: Sine function.
+tan: Tangent function.
+tfRegex: Regex for identifying fonts.
+      </pre>
+    </section>
+    <section id="functions">
+      <h2>7. Functions</h2>
+      <pre>
+addFieldToParent: Adds a field to a parent object.
+adjustDimsForRotation: Adjusts dimensions of an object according to a rotation.
+appendBezierCurve: Appends a Bezier Curve.
+appendQuadraticCurve: Appends a Quadratic Curve.
+asEnum: Converts a raw value into an Enum.
+asNumber: Converts a PDF Number to a raw number.
+asPDFName: Converts a string to a PDF Name.
+asPDFNumber: Converts a number to a PDF Number.
+assertFieldAppearanceOptions: Asserts the field appearance options.
+assertIsLiteralOrHexString: Asserts if a PDF Object is a literal or Hex string.
+beginMarkedContent: Begins a marked content sequence.
+beginText: Begins a text object.
+clip: Applies a clipping path.
+clipEvenOdd: Applies an even-odd clipping path.
+closePath: Closes the current path.
+cmyk: Creates a CMYK color object.
+colorToComponents: Converts a color to its color components.
+componentsToColor: Converts color components to a color.
+computeCombedFontSize: Computes the font size for combed text.
+computeFontSize: Computes the font size.
+concatTransformationMatrix: Concatenates a transformation matrix.
+convertToPDFField: Converts a field to a PDF Field.
+defaultButtonAppearanceProvider: The default button appearance provider.
+defaultCheckBoxAppearanceProvider: The default checkbox appearance provider.
+defaultDropdownAppearanceProvider: The default dropdown appearance provider.
+defaultOptionListAppearanceProvider: The default option list appearance provider.
+defaultRadioGroupAppearanceProvider: The default radio group appearance provider.
+defaultTextFieldAppearanceProvider: The default textfield appearance provider.
+degrees: Creates a degree object.
+degreesToRadians: Converts degrees to radians.
+drawButton: Draws a button.
+drawCheckBox: Draws a checkbox.
+drawCheckMark: Draws a checkmark.
+drawEllipse: Draws an ellipse.
+drawEllipseCurves: Draws the curves of an ellipse.
+drawEllipsePath: Draws the path of an ellipse.
+drawImage: Draws an image.
+drawLine: Draws a line.
+drawLinesOfText: Draws the lines of text.
+drawObject: Draws a XObject.
+drawOptionList: Draws an option list.
+drawPage: Draws a page.
+drawRadioButton: Draws a radio button.
+drawRectangle: Draws a rectangle.
+drawSvgPath: Draws an SVG path.
+drawText: Draws text.
+drawTextField: Draws a text field.
+drawTextLines: Draws lines of text.
+endMarkedContent: Ends a marked content sequence.
+endPath: Ends the current path.
+endText: Ends a text object.
+fill: Fills the current path.
+fillAndStroke: Fills and strokes the current path.
+getDefaultColor: Gets the default color of a field.
+getDefaultFontSize: Gets the default font size of a field.
+grayscale: Creates a grayscale color object.
+lastIndexOfWhitespace: Gets the last index of a whitespace.
+layoutCombedText: Layouts combed text.
+layoutMultilineText: Layouts multiline text.
+layoutSinglelineText: Layouts single line text.
+lineTo: Adds a line to the current path.
+moveText: Moves the text position.
+moveTo: Moves the current drawing position.
+nextLine: Moves to the next line.
+normalizeAppearance: Normalizes the appearance.
+popGraphicsState: Pops the graphics state.
+pushGraphicsState: Pushes the graphics state.
+radians: Creates a radian object.
+radiansToDegrees: Converts radians to degrees.
+rectangle: Adds a rectangle to the current path.
+reduceRotation: Reduces the degree rotation.
+restoreDashPattern: Restores the dash pattern.
+rgb: Creates an RGB color object.
+rotateAndSkewTextDegreesAndTranslate: Rotates and skews text by degrees and translates it.
+rotateAndSkewTextRadiansAndTranslate: Rotates and skews text by radians and translates it.
+rotateDegrees: Rotates the coordinate system by degrees.
+rotateInPlace: Rotates a rectangle in place.
+rotateRadians: Rotates the coordinate system by radians.
+rotateRectangle: Rotates a rectangle.
+scale: Scales the coordinate system.
+setCharacterSpacing: Sets the character spacing.
+setCharacterSqueeze: Sets the character squeeze.
+setDashPattern!: Sets the dash pattern for lines.
+setFillingCmykColor: Sets the filling CMYK color.
+setFillingColor: Sets the filling color (generic).
+setFillingGrayscaleColor: Sets the filling grayscale color.
+setFillingRgbColor: Sets the filling RGB color.
+setFontAndSize: Sets the font and size for text.
+setGraphicsState: Sets the graphics state.
+setLineCap: Sets the line cap style.
+setLineHeight: Sets the line height.
+setLineJoin: Sets the line join style.
+setLineWidth: Sets the line width.
+setStrokingCmykColor: Sets the stroking CMYK color.
+setStrokingColor: Sets the stroking color (generic).
+setStrokingGrayscaleColor: Sets the stroking grayscale color.
+setStrokingRgbColor: Sets the stroking RGB color.
+setTextMatrix: Sets the text matrix.
+setTextRenderingMode: Sets the text rendering mode.
+setTextRise: Sets the text rise.
+setWordSpacing: Sets the word spacing.
+showText: Shows text.
+skewDegrees: Skews the coordinate system by degrees.
+skewRadians: Skews the coordinate system by radians.
+splitFieldName: Splits the name of a field.
+splitOutLines: Splits the text into multiple lines.
+square: Adds a square to the current path.
+stroke: Strokes the current path.
+toDegrees: Converts a rotation to degrees.
+toRadians: Converts a rotation to radians.
+translate: Translates the coordinate system.
+updateDefaultAppearance: Updates the default appearance of a field.
+      </pre>
+    </section>
+    <section id="object-literals">
+      <h2>8. Object Literals</h2>
+      <p><strong>PageSizes</strong>: An object containing predefined page sizes (e.g., <code>PageSizes.Letter</code>, <code>PageSizes.A4</code>). These are arrays [width, height] in points.</p>
+      <pre>
+const { PDFDocument, PageSizes } = require('pdf-lib');
 
-    let filesArr = [];
+async function createPdf() {
+  const pdfDoc = await PDFDocument.create();
+  const page = pdfDoc.addPage([PageSizes.Letter[0], PageSizes.Letter[1]]); // Creates letter sized page.
 
-    function renderFileList() {
-      fileList.innerHTML = '';
-      filesArr.forEach((file, idx) => {
-        const li = document.createElement('li');
-        li.className = 'file-item';
-        const nameDiv = document.createElement('div');
-        nameDiv.className = 'file-name';
-        nameDiv.textContent = file.name;
-        const actions = document.createElement('div');
-        actions.className = 'file-actions';
-        // Up button
-        const upBtn = document.createElement('button');
-        upBtn.textContent = '↑';
-        upBtn.title = 'Move up';
-        upBtn.disabled = idx === 0;
-        upBtn.onclick = () => {
-          if (idx > 0) {
-            [filesArr[idx-1], filesArr[idx]] = [filesArr[idx], filesArr[idx-1]];
-            renderFileList();
-          }
-        };
-        // Down button
-        const downBtn = document.createElement('button');
-        downBtn.textContent = '↓';
-        downBtn.title = 'Move down';
-        downBtn.disabled = idx === filesArr.length - 1;
-        downBtn.onclick = () => {
-          if (idx < filesArr.length - 1) {
-            [filesArr[idx+1], filesArr[idx]] = [filesArr[idx], filesArr[idx+1]];
-            renderFileList();
-          }
-        };
-        // Preview button
-        const previewBtn = document.createElement('button');
-        previewBtn.textContent = 'Preview';
-        previewBtn.onclick = () => previewPDF(file);
-        // Remove button
-        const removeBtn = document.createElement('button');
-        removeBtn.textContent = '✕';
-        removeBtn.title = 'Remove';
-        removeBtn.onclick = () => {
-          filesArr.splice(idx, 1);
-          renderFileList();
-        };
-        actions.appendChild(upBtn);
-        actions.appendChild(downBtn);
-        actions.appendChild(previewBtn);
-        actions.appendChild(removeBtn);
-        li.appendChild(nameDiv);
-        li.appendChild(actions);
-        fileList.appendChild(li);
-      });
-    }
-
-    input.onchange = (e) => {
-      filesArr = Array.from(e.target.files);
-      renderFileList();
-    };
-
-    // PDF.js preview logic
-    async function previewPDF(file) {
-      // Debug: Log pdfjsLib and file info
-      console.log('window.pdfjsLib:', window.pdfjsLib);
-      console.log('Previewing file:', file.name, 'size:', file.size);
-      const fileReader = new FileReader();
-      fileReader.onload = async function() {
-        try {
-          if (!window.pdfjsLib) {
-            alert('PDF.js library not loaded!');
-            return;
-          }
-          const typedarray = new Uint8Array(this.result);
-          const loadingTask = window['pdfjsLib'].getDocument({data: typedarray});
-          const pdf = await loadingTask.promise;
-          const page = await pdf.getPage(1);
-          const viewport = page.getViewport({scale: 1.5});
-          const canvas = pdfPreview;
-          const context = canvas.getContext('2d');
-          canvas.width = viewport.width;
-          canvas.height = viewport.height;
-          await page.render({canvasContext: context, viewport: viewport}).promise;
-          previewModal.style.display = 'flex';
-        } catch (err) {
-          console.error('PDF preview error:', err);
-          pdfPreview.width = 400;
-          pdfPreview.height = 100;
-          const ctx = pdfPreview.getContext('2d');
-          ctx.clearRect(0, 0, pdfPreview.width, pdfPreview.height);
-          ctx.font = '16px Arial';
-          ctx.fillStyle = 'red';
-          ctx.fillText('Error loading PDF preview', 10, 50);
-          previewModal.style.display = 'flex';
-        }
-      };
-      fileReader.readAsArrayBuffer(file);
-    }
-
-    closeModal.onclick = () => {
-      previewModal.style.display = 'none';
-      pdfPreview.getContext('2d').clearRect(0, 0, pdfPreview.width, pdfPreview.height);
-    };
-    // Close modal on outside click
-    previewModal.onclick = (e) => {
-      if (e.target === previewModal) {
-        closeModal.onclick();
-      }
-    };
-
-    mergeBtn.onclick = async () => {
-      if (!filesArr.length) {
-        statusDiv.textContent = 'Please select PDF files.';
-        return;
-      }
-      statusDiv.textContent = 'Merging...';
-      try {
-        const { PDFDocument } = window.PDFLib;
-        const mergedPdf = await PDFDocument.create();
-        for (let file of filesArr) {
-          const arrayBuffer = await file.arrayBuffer();
-          const pdf = await PDFDocument.load(arrayBuffer);
-          const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
-          copiedPages.forEach(page => mergedPdf.addPage(page));
-        }
-        const mergedPdfBytes = await mergedPdf.save();
-        const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'merged.pdf';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        statusDiv.textContent = 'Merged PDF downloaded!';
-      } catch (err) {
-        statusDiv.textContent = 'Error merging PDFs: ' + err.message;
-      }
-    };
-  </script>
+  // ... rest of your code
+}
+      </pre>
+    </section>
+  </main>
+  <footer>
+    <p>&copy; 2024 PDF Editor</p>
+  </footer>
 </body>
-</html> 
+</html>
