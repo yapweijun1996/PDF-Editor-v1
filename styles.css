@@ -176,15 +176,20 @@ footer {
   pointer-events: none; /* default no pointer events */
 }
 .annotation {
+  background: rgba(255, 255, 0, 0.4);
+  border: 1px solid rgba(255, 255, 0, 0.8);
   position: absolute;
-  background-color: rgba(255, 255, 255, 0.7);
-  padding: 0;
-  line-height: 1;
-  border: 1px dashed transparent;
-  cursor: move;
-  pointer-events: auto;
-  user-select: none;
-  white-space: nowrap;
+}
+.annotation:hover::after {
+  content: attr(data-comment);
+  position: absolute;
+  background: #333;
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  white-space: pre-wrap;
+  transform: translateY(-100%);
+  z-index: 10;
 }
 .annotation.selected {
   border-color: var(--primary-color);

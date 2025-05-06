@@ -32,6 +32,11 @@ let startX = 0;
 let startY = 0;
 let shapePreviewEl = null;
 
+// Highlight annotation mode variables
+const highlightBtn = document.getElementById('highlightBtn');
+let highlightMode = false;
+let highlights = [];  // list of highlight annotations
+
 // Map fontSelect value to CSS font-family
 const fontMap = {
   Helvetica: 'Helvetica, Arial, sans-serif',
@@ -136,6 +141,17 @@ ellipseBtn.addEventListener('click', () => {
   }
 });
 
+// Toggle highlight annotation mode
+highlightBtn.addEventListener('click', () => {
+  highlightMode = !highlightMode;
+  highlightBtn.classList.toggle('active', highlightMode);
+  // disable other shape modes
+  shapeMode = null;
+  rectBtn.classList.remove('active');
+  ellipseBtn.classList.remove('active');
+  overlayContainer.style.pointerEvents = highlightMode ? 'auto' : 'none';
+});
+
 // Render shapes overlay
 function renderShapes() {
   shapes.filter(s => s.page === currentPage).forEach(s => {
@@ -160,7 +176,28 @@ function renderShapes() {
   });
 }
 
-// Override renderPage to include shapes
+// Render highlight annotations for current page
+function renderHighlights() {
+  highlights.filter(h => h.page === currentPage).forEach(h => {
+    const el = document.createElement('div');
+    el.className = 'annotation';
+    el.dataset.comment = h.comment;
+    // Position and size in CSS pixels
+    const [x1Px, y1Px] = currentViewport.convertToViewportPoint(h.xMin, h.yMin);
+    const [x2Px, y2Px] = currentViewport.convertToViewportPoint(h.xMax, h.yMax);
+    const left = Math.min(x1Px, x2Px);
+    const top = Math.min(y1Px, y2Px);
+    const widthPx = Math.abs(x2Px - x1Px);
+    const heightPx = Math.abs(y2Px - y1Px);
+    el.style.left = `${left}px`;
+    el.style.top = `${top}px`;
+    el.style.width = `${widthPx}px`;
+    el.style.height = `${heightPx}px`;
+    overlayContainer.appendChild(el);
+  });
+}
+
+// Override renderPage to include shapes and highlights
 async function renderPage() {
   if (!pdfjsDoc) return;
   const page = await pdfjsDoc.getPage(currentPage);
@@ -171,11 +208,12 @@ async function renderPage() {
   const renderContext = { canvasContext: ctx, viewport };
   await page.render(renderContext).promise;
   pageNumberInput.value = currentPage;
-  // Render overlay shapes and annotations
+  // Render overlay shapes, highlights, and annotations
   overlayContainer.innerHTML = '';
   overlayContainer.style.width = canvas.width + 'px';
   overlayContainer.style.height = canvas.height + 'px';
   renderShapes();
+  renderHighlights();
   renderAnnotations();
 }
 
@@ -444,4 +482,52 @@ async function nudge(dx, dy) {
 nudgeLeftBtn.addEventListener('click', () => nudge(-nudgeStep, 0));
 nudgeRightBtn.addEventListener('click', () => nudge(nudgeStep, 0));
 nudgeUpBtn.addEventListener('click', () => nudge(0, nudgeStep));
-nudgeDownBtn.addEventListener('click', () => nudge(0, -nudgeStep)); 
+nudgeDownBtn.addEventListener('click', () => nudge(0, -nudgeStep));
+
+// Overlay drawing for highlight mode
+overlayContainer.addEventListener('mousedown', e => {
+  if (!highlightMode) return;
+  drawing = true;
+  startX = e.offsetX;
+  startY = e.offsetY;
+  // preview element
+  shapePreviewEl = document.createElement('div');
+  shapePreviewEl.className = 'shape-preview';
+  shapePreviewEl.style.background = 'rgba(255,255,0,0.4)';
+  shapePreviewEl.style.border = '1px dashed rgba(255,255,0,0.8)';
+  shapePreviewEl.style.left = `${startX}px`;
+  shapePreviewEl.style.top = `${startY}px`;
+  overlayContainer.appendChild(shapePreviewEl);
+});
+overlayContainer.addEventListener('mousemove', e => {
+  if (!drawing || !highlightMode) return;
+  const curX = e.offsetX;
+  const curY = e.offsetY;
+  const w = curX - startX;
+  const h = curY - startY;
+  shapePreviewEl.style.width = `${Math.abs(w)}px`;
+  shapePreviewEl.style.height = `${Math.abs(h)}px`;
+  shapePreviewEl.style.left = `${w < 0 ? curX : startX}px`;
+  shapePreviewEl.style.top = `${h < 0 ? curY : startY}px`;
+});
+overlayContainer.addEventListener('mouseup', e => {
+  if (!drawing || !highlightMode) return;
+  drawing = false;
+  const rect = shapePreviewEl.getBoundingClientRect();
+  const parentRect = overlayContainer.getBoundingClientRect();
+  // convert CSS px to PDF coordinates
+  const x1Px = rect.left - parentRect.left;
+  const y1Px = rect.bottom - parentRect.top;
+  const x2Px = rect.right - parentRect.left;
+  const y2Px = rect.top - parentRect.top;
+  const [xMin, yMin] = currentViewport.convertToPdfPoint(x1Px, y1Px);
+  const [xMax, yMax] = currentViewport.convertToPdfPoint(x2Px, y2Px);
+  const comment = prompt('Enter highlight comment:');
+  if (comment) {
+    const id = Date.now() + '_' + Math.random();
+    highlights.push({ id, page: currentPage, xMin, yMin, xMax, yMax, comment });
+  }
+  overlayContainer.removeChild(shapePreviewEl);
+  shapePreviewEl = null;
+  renderPage();
+}); 
