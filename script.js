@@ -383,33 +383,51 @@ redoBtn.addEventListener('click', async () => {
   await renderPage();
 });
 
-// Save PDF including annotations
+// Save PDF including shapes, highlights, and text annotations
 downloadBtn.addEventListener('click', async () => {
   if (!pdfBytes) return alert('Load a PDF first.');
+  // Load a fresh PDFDocument from original bytes
   const saveDoc = await PDFDocument.load(pdfBytes);
-  for (const a of annotations) {
-    const page = saveDoc.getPages()[a.page - 1];
-    /* embed font & color */
-    page.drawText(a.text, {
-      x: a.x,
-      y: a.y,
-      size: a.size,
-      font: await saveDoc.embedFont(fontMap[a.fontName] ? StandardFonts[a.fontName] : StandardFonts.Helvetica),
-      color: rgb(
-        parseInt(a.color.slice(1,3),16)/255,
-        parseInt(a.color.slice(3,5),16)/255,
-        parseInt(a.color.slice(5,7),16)/255
-      ),
-    });
+  const pages = saveDoc.getPages();
+
+  // Draw shapes (rectangles & ellipses)
+  for (const s of shapes) {
+    const page = pages[s.page - 1];
+    const width = s.xMax - s.xMin;
+    const height = s.yMax - s.yMin;
+    const [r, g, b] = [s.color.slice(1,3), s.color.slice(3,5), s.color.slice(5,7)]
+      .map(hx => parseInt(hx, 16) / 255);
+    if (s.mode === 'rect') {
+      page.drawRectangle({ x: s.xMin, y: s.yMin, width, height, borderColor: rgb(r, g, b), borderWidth: s.borderWidth });
+    } else {
+      page.drawEllipse({ x: s.xMin + width/2, y: s.yMin + height/2, xScale: width/2, yScale: height/2, borderColor: rgb(r, g, b), borderWidth: s.borderWidth });
+    }
   }
+
+  // Draw highlight annotations (filled yellow)
+  for (const h of highlights) {
+    const page = pages[h.page - 1];
+    const width = h.xMax - h.xMin;
+    const height = h.yMax - h.yMin;
+    page.drawRectangle({ x: h.xMin, y: h.yMin, width, height, color: rgb(1, 1, 0) });
+  }
+
+  // Draw text annotations
+  for (const a of annotations) {
+    const page = pages[a.page - 1];
+    const font = await saveDoc.embedFont(StandardFonts[a.fontName] || StandardFonts.Helvetica);
+    const [rT, gT, bT] = [a.color.slice(1,3), a.color.slice(3,5), a.color.slice(5,7)].map(hx => parseInt(hx, 16) / 255);
+    page.drawText(a.text, { x: a.x, y: a.y, size: a.size, font, color: rgb(rT, gT, bT) });
+  }
+
+  // Save and download the edited PDF
   const bytes = await saveDoc.save();
   const blob = new Blob([bytes], { type: 'application/pdf' });
-  const url = URL.createObjectURL(blob);
-  const aLink = document.createElement('a');
-  aLink.href = url;
-  aLink.download = 'edited.pdf';
-  aLink.click();
-  URL.revokeObjectURL(url);
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'edited.pdf';
+  link.click();
+  URL.revokeObjectURL(link.href);
 });
 
 // Keyboard shortcuts
