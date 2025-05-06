@@ -3,7 +3,7 @@
 // PDF.js worker setup
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
-const { PDFDocument, StandardFonts, rgb, PDFName, PDFNumber, PDFString, PDFBoolean } = PDFLib;
+const { PDFDocument, StandardFonts, rgb, PDFName, PDFNumber, PDFString } = PDFLib;
 
 // State variables
 let pdfDoc = null;           // pdf-lib document
@@ -430,7 +430,7 @@ downloadBtn.addEventListener('click', async () => {
       Rect: saveDoc.context.obj(popupRect),
       Parent: highlightRef,
       Contents: PDFString.of(h.comment),
-      Open: PDFBoolean.of(true)
+      Open: true
     });
     const popupRef = saveDoc.context.register(popupDict);
     // Add both annotations to the page
