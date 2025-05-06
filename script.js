@@ -149,7 +149,6 @@ highlightBtn.addEventListener('click', () => {
   shapeMode = null;
   rectBtn.classList.remove('active');
   ellipseBtn.classList.remove('active');
-  overlayContainer.style.pointerEvents = highlightMode ? 'auto' : 'none';
 });
 
 // Render shapes overlay
@@ -219,9 +218,6 @@ async function renderPage() {
 
 // Render annotations for current page
 function renderAnnotations() {
-  overlayContainer.innerHTML = '';
-  overlayContainer.style.width = canvas.width + 'px';
-  overlayContainer.style.height = canvas.height + 'px';
   annotations
     .filter(a => a.page === currentPage)
     .forEach(a => {
@@ -484,13 +480,15 @@ nudgeRightBtn.addEventListener('click', () => nudge(nudgeStep, 0));
 nudgeUpBtn.addEventListener('click', () => nudge(0, nudgeStep));
 nudgeDownBtn.addEventListener('click', () => nudge(0, -nudgeStep));
 
-// Overlay drawing for highlight mode
-overlayContainer.addEventListener('mousedown', e => {
+// New highlight drawing via canvas and document events
+canvas.addEventListener('mousedown', e => {
   if (!highlightMode) return;
+  e.preventDefault();
   drawing = true;
-  startX = e.offsetX;
-  startY = e.offsetY;
-  // preview element
+  const rectCanvas = canvas.getBoundingClientRect();
+  startX = e.clientX - rectCanvas.left;
+  startY = e.clientY - rectCanvas.top;
+  // create preview element
   shapePreviewEl = document.createElement('div');
   shapePreviewEl.className = 'shape-preview';
   shapePreviewEl.style.background = 'rgba(255,255,0,0.4)';
@@ -499,10 +497,11 @@ overlayContainer.addEventListener('mousedown', e => {
   shapePreviewEl.style.top = `${startY}px`;
   overlayContainer.appendChild(shapePreviewEl);
 });
-overlayContainer.addEventListener('mousemove', e => {
+document.addEventListener('mousemove', e => {
   if (!drawing || !highlightMode) return;
-  const curX = e.offsetX;
-  const curY = e.offsetY;
+  const rectCanvas = canvas.getBoundingClientRect();
+  const curX = e.clientX - rectCanvas.left;
+  const curY = e.clientY - rectCanvas.top;
   const w = curX - startX;
   const h = curY - startY;
   shapePreviewEl.style.width = `${Math.abs(w)}px`;
@@ -510,23 +509,19 @@ overlayContainer.addEventListener('mousemove', e => {
   shapePreviewEl.style.left = `${w < 0 ? curX : startX}px`;
   shapePreviewEl.style.top = `${h < 0 ? curY : startY}px`;
 });
-overlayContainer.addEventListener('mouseup', e => {
+document.addEventListener('mouseup', e => {
   if (!drawing || !highlightMode) return;
   drawing = false;
-  const rect = shapePreviewEl.getBoundingClientRect();
+  const rectPx = shapePreviewEl.getBoundingClientRect();
   const parentRect = overlayContainer.getBoundingClientRect();
-  // convert CSS px to PDF coordinates
-  const x1Px = rect.left - parentRect.left;
-  const y1Px = rect.bottom - parentRect.top;
-  const x2Px = rect.right - parentRect.left;
-  const y2Px = rect.top - parentRect.top;
+  const x1Px = rectPx.left - parentRect.left;
+  const y1Px = rectPx.bottom - parentRect.top;
+  const x2Px = rectPx.right - parentRect.left;
+  const y2Px = rectPx.top - parentRect.top;
   const [xMin, yMin] = currentViewport.convertToPdfPoint(x1Px, y1Px);
   const [xMax, yMax] = currentViewport.convertToPdfPoint(x2Px, y2Px);
   const comment = prompt('Enter highlight comment:');
-  if (comment) {
-    const id = Date.now() + '_' + Math.random();
-    highlights.push({ id, page: currentPage, xMin, yMin, xMax, yMax, comment });
-  }
+  if (comment) highlights.push({ page: currentPage, xMin, yMin, xMax, yMax, comment });
   overlayContainer.removeChild(shapePreviewEl);
   shapePreviewEl = null;
   renderPage();
