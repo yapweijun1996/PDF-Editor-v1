@@ -138,6 +138,10 @@ function renderAnnotations() {
       el.style.color = a.color;
       el.style.cursor = 'move';
       el.style.pointerEvents = 'auto';
+      // Highlight if selected
+      if (selectedAnno && a.id === selectedAnno.id) {
+        el.classList.add('selected');
+      }
       // Append, then measure height
       overlayContainer.appendChild(el);
       // Convert PDF point to CSS pixel
@@ -223,6 +227,10 @@ canvas.addEventListener('click', async (e) => {
     y,
   };
   annotations.push(anno);
+  // Auto-select new annotation
+  selectedAnno = anno;
+  xCoordInput.value = anno.x.toFixed(1);
+  yCoordInput.value = anno.y.toFixed(1);
   renderAnnotations();
 });
 
@@ -257,9 +265,7 @@ function annotationMouseMove(e) {
   document.getElementById('yCoordInput').value = yPdf.toFixed(2);
 }
 function annotationMouseUp(e) {
-  const el = overlayContainer.querySelector(`[data-id="${selectedAnno.id}"]`);
-  el.classList.remove('selected');
-  selectedAnno = null;
+  // Stop drag but keep annotation selected
   document.removeEventListener('mousemove', annotationMouseMove);
   document.removeEventListener('mouseup', annotationMouseUp);
 }
@@ -349,27 +355,31 @@ yCoordInput.addEventListener('change', () => {
 
 // Nudge handlers (0.1 point per click)
 const nudgeStep = 0.1;
-nudgeLeftBtn.addEventListener('click', () => {
-  if (!selectedAnno) return;
-  selectedAnno.x -= nudgeStep;
+
+/**
+ * Move the selected annotation by (dx, dy) points
+ */
+async function nudge(dx, dy) {
+  console.log('Nudge action:', dx, dy, 'Current annotation:', selectedAnno);
+  // Ensure there's an annotation to move
+  if (!annotations.length) return;
+  // Select last annotation if none currently selected
+  if (!selectedAnno) {
+    selectedAnno = annotations[annotations.length - 1];
+  }
+  // Update coords
+  selectedAnno.x += dx;
+  selectedAnno.y += dy;
+  // Reflect in UI
   xCoordInput.value = selectedAnno.x.toFixed(1);
-  renderAnnotations();
-});
-nudgeRightBtn.addEventListener('click', () => {
-  if (!selectedAnno) return;
-  selectedAnno.x += nudgeStep;
-  xCoordInput.value = selectedAnno.x.toFixed(1);
-  renderAnnotations();
-});
-nudgeUpBtn.addEventListener('click', () => {
-  if (!selectedAnno) return;
-  selectedAnno.y += nudgeStep;
   yCoordInput.value = selectedAnno.y.toFixed(1);
   renderAnnotations();
-});
-nudgeDownBtn.addEventListener('click', () => {
-  if (!selectedAnno) return;
-  selectedAnno.y -= nudgeStep;
-  yCoordInput.value = selectedAnno.y.toFixed(1);
-  renderAnnotations();
-}); 
+  // Record change for undo
+  await pushHistory();
+}
+
+// Attach nudge buttons
+nudgeLeftBtn.addEventListener('click', () => nudge(-nudgeStep, 0));
+nudgeRightBtn.addEventListener('click', () => nudge(nudgeStep, 0));
+nudgeUpBtn.addEventListener('click', () => nudge(0, nudgeStep));
+nudgeDownBtn.addEventListener('click', () => nudge(0, -nudgeStep)); 
