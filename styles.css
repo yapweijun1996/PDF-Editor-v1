@@ -173,7 +173,7 @@ footer {
   position: absolute;
   top: 0;
   left: 0;
-  pointer-events: none;
+  pointer-events: none; /* default no pointer events */
 }
 .annotation {
   position: absolute;
@@ -190,9 +190,33 @@ footer {
   border-color: var(--primary-color);
   box-shadow: 0 0 4px var(--primary-hover);
 }
+.shape-preview {
+  position: absolute;
+  border: 1px dashed #000;
+  background: none;
+  pointer-events: none;
+}
 
 /* Coordinate inputs */
 #xCoordInput,
 #yCoordInput {
   width: 80px;
+}
+
+.shape-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.shape-controls button,
+.shape-controls input {
+  padding: 4px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--button-radius);
+  background: #fff;
+  cursor: pointer;
+}
+.shape-controls button.active {
+  background: var(--primary-color);
+  color: #fff;
 } 

@@ -19,6 +19,18 @@ const overlayContainer = document.getElementById('overlayContainer');
 let annotations = []; // annotation list
 let selectedAnno = null;
 let dragOffset = { x: 0, y: 0 };
+// Add shape drawing controls references and state
+const rectBtn = document.getElementById('rectBtn');
+const ellipseBtn = document.getElementById('ellipseBtn');
+const shapeColorInput = document.getElementById('shapeColorInput');
+const borderWidthInput = document.getElementById('borderWidthInput');
+
+let shapes = []; // list of drawn shapes
+let shapeMode = null; // 'rect' or 'ellipse'
+let drawing = false;
+let startX = 0;
+let startY = 0;
+let shapePreviewEl = null;
 
 // Map fontSelect value to CSS font-family
 const fontMap = {
@@ -102,7 +114,53 @@ async function loadArrayBuffer(buffer, file) {
   await renderPage();
 }
 
-// Render current page on canvas
+// Toggle shape drawing modes
+rectBtn.addEventListener('click', () => {
+  if (shapeMode === 'rect') {
+    shapeMode = null;
+    rectBtn.classList.remove('active');
+  } else {
+    shapeMode = 'rect';
+    rectBtn.classList.add('active');
+    ellipseBtn.classList.remove('active');
+  }
+});
+ellipseBtn.addEventListener('click', () => {
+  if (shapeMode === 'ellipse') {
+    shapeMode = null;
+    ellipseBtn.classList.remove('active');
+  } else {
+    shapeMode = 'ellipse';
+    ellipseBtn.classList.add('active');
+    rectBtn.classList.remove('active');
+  }
+});
+
+// Render shapes overlay
+function renderShapes() {
+  shapes.filter(s => s.page === currentPage).forEach(s => {
+    const el = document.createElement('div');
+    el.className = 'shape';
+    const { xMin, yMin, xMax, yMax, color, borderWidth, mode } = s;
+    const [x1Px, y1Px] = currentViewport.convertToViewportPoint(xMin, yMin);
+    const [x2Px, y2Px] = currentViewport.convertToViewportPoint(xMax, yMax);
+    const left = Math.min(x1Px, x2Px);
+    const top = Math.min(y1Px, y2Px);
+    const widthPx = Math.abs(x2Px - x1Px);
+    const heightPx = Math.abs(y2Px - y1Px);
+    el.style.position = 'absolute';
+    el.style.left = `${left}px`;
+    el.style.top = `${top}px`;
+    el.style.width = `${widthPx}px`;
+    el.style.height = `${heightPx}px`;
+    el.style.border = `${borderWidth * zoomLevel}px solid ${color}`;
+    el.style.background = 'none';
+    if (mode === 'ellipse') el.style.borderRadius = '50%';
+    overlayContainer.appendChild(el);
+  });
+}
+
+// Override renderPage to include shapes
 async function renderPage() {
   if (!pdfjsDoc) return;
   const page = await pdfjsDoc.getPage(currentPage);
@@ -113,7 +171,11 @@ async function renderPage() {
   const renderContext = { canvasContext: ctx, viewport };
   await page.render(renderContext).promise;
   pageNumberInput.value = currentPage;
-  // Render overlay annotations
+  // Render overlay shapes and annotations
+  overlayContainer.innerHTML = '';
+  overlayContainer.style.width = canvas.width + 'px';
+  overlayContainer.style.height = canvas.height + 'px';
+  renderShapes();
   renderAnnotations();
 }
 
