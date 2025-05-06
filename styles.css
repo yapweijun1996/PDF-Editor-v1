@@ -181,7 +181,7 @@ footer {
   pointer-events: none;
 }
 .highlight {
-  background: rgba(255, 255, 0, 0.4);
+  background: rgba(255, 255, 0, 0.2);
   border: 1px solid rgba(255, 255, 0, 0.8);
   pointer-events: auto;
   position: absolute;
@@ -189,12 +189,13 @@ footer {
 .highlight:hover::after {
   content: attr(data-comment);
   position: absolute;
+  left: 0;
+  bottom: 100%;
   background: #333;
   color: #fff;
   padding: 4px 8px;
   border-radius: 4px;
   white-space: pre-wrap;
-  transform: translateY(-100%);
   z-index: 10;
 }
 .shape-preview {
