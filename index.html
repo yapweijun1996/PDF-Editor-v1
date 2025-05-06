@@ -1,84 +1,97 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PDF Editor</title>
-  <link rel="stylesheet" href="styles.css" />
-  <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-</head>
-<body>
-  <div class="container">
-    <h1>PDF Editor</h1>
-    <div class="toolbar">
-      <label id="dropZone" class="drop-zone">
-        Drag & drop PDF here or <input type="file" id="fileInput" accept="application/pdf" />
-      </label>
-      <span id="fileName">No file selected</span>
-      <div class="nav-buttons">
-        <button id="firstPageBtn" title="First Page">⏮️</button>
-        <button id="prevPageBtn" title="Previous Page">◀️</button>
-        <span>Page <input type="number" id="pageNumberInput" min="1" value="1" /> / <span id="totalPages">0</span></span>
-        <button id="nextPageBtn" title="Next Page">▶️</button>
-        <button id="lastPageBtn" title="Last Page">⏭️</button>
-      </div>
-      <div class="zoom-controls">
-        <button id="zoomOutBtn">🔍-</button>
-        <select id="zoomSelect">
-          <option value="0.5">50%</option>
-          <option value="1" selected>100%</option>
-          <option value="1.5">150%</option>
-          <option value="2">200%</option>
-        </select>
-        <button id="zoomInBtn">🔍+</button>
-      </div>
-      <div class="rotate-controls">
-        <button id="rotateLeftBtn" title="Rotate Left">↺</button>
-        <button id="rotateRightBtn" title="Rotate Right">↻</button>
-      </div>
-      <button id="undoBtn" disabled>Undo</button>
-      <button id="redoBtn" disabled>Redo</button>
-      <button id="downloadBtn">Save PDF</button>
-      <div class="shape-controls">
-        <button id="rectBtn" title="Draw Rectangle">▭</button>
-        <button id="ellipseBtn" title="Draw Ellipse">◯</button>
-        <button id="highlightBtn" title="Highlight">🖍️</button>
-        <input type="color" id="shapeColorInput" title="Shape Color" value="#ff0000" />
-        <input type="number" id="borderWidthInput" title="Border Width (pt)" placeholder="Border width" value="1" step="0.1" />
-      </div>
-    </div>
-    <div class="viewer-container">
-      <canvas id="pdfCanvas" class="viewer"></canvas>
-      <div id="overlayContainer"></div>
-    </div>
-    <div class="controls">
-      <h2>Add Text (click on canvas to place)</h2>
-      <input type="text" id="textInput" placeholder="Text to add" />
-      <select id="fontSelect">
-        <option value="Helvetica">Helvetica</option>
-        <option value="HelveticaBold">Helvetica Bold</option>
-        <option value="HelveticaOblique">Helvetica Oblique</option>
-        <option value="HelveticaBoldOblique">Helvetica Bold Oblique</option>
-        <option value="TimesRoman">Times Roman</option>
-        <option value="Courier">Courier</option>
-      </select>
-      <input type="number" id="sizeInput" placeholder="Font size (pts)" value="24" />
-      <input type="color" id="colorInput" value="#000000" />
-      <select id="alignSelect">
-        <option value="left">Left</option>
-        <option value="center">Center</option>
-        <option value="right">Right</option>
-      </select>
-      <input type="number" id="xCoordInput" placeholder="X (pts)" step="0.1" />
-      <input type="number" id="yCoordInput" placeholder="Y (pts)" step="0.1" />
-      <button type="button" id="nudgeLeftBtn" title="Nudge Left">⬅️</button>
-      <button type="button" id="nudgeRightBtn" title="Nudge Right">➡️</button>
-      <button type="button" id="nudgeUpBtn" title="Nudge Up">⬆️</button>
-      <button type="button" id="nudgeDownBtn" title="Nudge Down">⬇️</button>
-    </div>
-  </div>
-  <script src="script.js"></script>
-</body>
+	<head>
+		<!-- Search Engine Optimization (SEO) Meta Tags -->
+		<meta name="description" content="PDF Editor - A web application for editing PDF files online. Add shapes, highlight text, and customize text properties with ease.">
+		<meta name="keywords" content="PDF Editor, PDF editing, online PDF editor, PDF manipulation, PDF tools">
+		<meta name="author" content="Your Name">
+		<meta property="og:title" content="PDF Editor - Online PDF Editing Tool">
+		<meta property="og:description" content="Edit PDF files online with ease. Drag and drop, add text, draw shapes, and more.">
+		<meta property="og:image" content="https://yapweijun1996.github.io/PDF-Editor-v1/og_img.jpg">
+		<meta property="og:url" content="https://yapweijun1996.github.io/PDF-Editor-v1/">
+		<meta property="og:site_name" content="PDF Editor">
+		<meta name="twitter:title" content="PDF Editor - Online PDF Editing Tool">
+		<meta name="twitter:description" content="Edit PDF files online with ease. Drag and drop, add text, draw shapes, and more.">
+		<meta name="twitter:image" content="https://yapweijun1996.github.io/PDF-Editor-v1/og_img.jpg">
+		
+		<meta charset="UTF-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>PDF Editor</title>
+		<link rel="stylesheet" href="styles.css" />
+		<script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+	</head>
+	<body>
+		<div class="container">
+			<h1>PDF Editor</h1>
+			<div class="toolbar">
+				<label id="dropZone" class="drop-zone">
+					Drag & drop PDF here or <input type="file" id="fileInput" accept="application/pdf" />
+				</label>
+				<span id="fileName">No file selected</span>
+				<div class="nav-buttons">
+					<button id="firstPageBtn" title="First Page">⏮️</button>
+					<button id="prevPageBtn" title="Previous Page">◀️</button>
+					<span>Page <input type="number" id="pageNumberInput" min="1" value="1" /> / <span id="totalPages">0</span></span>
+					<button id="nextPageBtn" title="Next Page">▶️</button>
+					<button id="lastPageBtn" title="Last Page">⏭️</button>
+				</div>
+				<div class="zoom-controls">
+					<button id="zoomOutBtn">🔍-</button>
+					<select id="zoomSelect">
+						<option value="0.5">50%</option>
+						<option value="1" selected>100%</option>
+						<option value="1.5">150%</option>
+						<option value="2">200%</option>
+					</select>
+					<button id="zoomInBtn">🔍+</button>
+				</div>
+				<div class="rotate-controls">
+					<button id="rotateLeftBtn" title="Rotate Left">↺</button>
+					<button id="rotateRightBtn" title="Rotate Right">↻</button>
+				</div>
+				<button id="undoBtn" disabled>Undo</button>
+				<button id="redoBtn" disabled>Redo</button>
+				<button id="downloadBtn">Save PDF</button>
+				<div class="shape-controls">
+					<button id="rectBtn" title="Draw Rectangle">▭</button>
+					<button id="ellipseBtn" title="Draw Ellipse">◯</button>
+					<button id="highlightBtn" title="Highlight">🖍️</button>
+					<input type="color" id="shapeColorInput" title="Shape Color" value="#ff0000" />
+					<input type="number" id="borderWidthInput" title="Border Width (pt)" placeholder="Border width" value="1" step="0.1" />
+				</div>
+			</div>
+			<div class="viewer-container">
+				<canvas id="pdfCanvas" class="viewer"></canvas>
+				<div id="overlayContainer"></div>
+			</div>
+			<div class="controls">
+				<h2>Add Text (click on canvas to place)</h2>
+				<input type="text" id="textInput" placeholder="Text to add" />
+				<select id="fontSelect">
+					<option value="Helvetica">Helvetica</option>
+					<option value="HelveticaBold">Helvetica Bold</option>
+					<option value="HelveticaOblique">Helvetica Oblique</option>
+					<option value="HelveticaBoldOblique">Helvetica Bold Oblique</option>
+					<option value="TimesRoman">Times Roman</option>
+					<option value="Courier">Courier</option>
+				</select>
+				<input type="number" id="sizeInput" placeholder="Font size (pts)" value="24" />
+				<input type="color" id="colorInput" value="#000000" />
+				<select id="alignSelect">
+					<option value="left">Left</option>
+					<option value="center">Center</option>
+					<option value="right">Right</option>
+				</select>
+				<input type="number" id="xCoordInput" placeholder="X (pts)" step="0.1" />
+				<input type="number" id="yCoordInput" placeholder="Y (pts)" step="0.1" />
+				<button type="button" id="nudgeLeftBtn" title="Nudge Left">⬅️</button>
+				<button type="button" id="nudgeRightBtn" title="Nudge Right">➡️</button>
+				<button type="button" id="nudgeUpBtn" title="Nudge Up">⬆️</button>
+				<button type="button" id="nudgeDownBtn" title="Nudge Down">⬇️</button>
+			</div>
+		</div>
+		<script src="script.js"></script>
+	</body>
 </html>
