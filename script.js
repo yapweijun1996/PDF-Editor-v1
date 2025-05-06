@@ -22,19 +22,16 @@ let dragOffset = { x: 0, y: 0 };
 // Add shape drawing controls references and state
 const rectBtn = document.getElementById('rectBtn');
 const ellipseBtn = document.getElementById('ellipseBtn');
+const highlightBtn = document.getElementById('highlightBtn');
 const shapeColorInput = document.getElementById('shapeColorInput');
 const borderWidthInput = document.getElementById('borderWidthInput');
 
 let shapes = []; // list of drawn shapes
-let shapeMode = null; // 'rect' or 'ellipse'
+let drawMode = null; // 'rect'|'ellipse'|'highlight'
 let drawing = false;
 let startX = 0;
 let startY = 0;
 let shapePreviewEl = null;
-
-// Highlight annotation mode variables
-const highlightBtn = document.getElementById('highlightBtn');
-let highlightMode = false;
 let highlights = [];  // list of highlight annotations
 
 // Map fontSelect value to CSS font-family
@@ -121,34 +118,25 @@ async function loadArrayBuffer(buffer, file) {
 
 // Toggle shape drawing modes
 rectBtn.addEventListener('click', () => {
-  if (shapeMode === 'rect') {
-    shapeMode = null;
-    rectBtn.classList.remove('active');
-  } else {
-    shapeMode = 'rect';
-    rectBtn.classList.add('active');
-    ellipseBtn.classList.remove('active');
-  }
+  drawMode = drawMode === 'rect' ? null : 'rect';
+  rectBtn.classList.toggle('active', drawMode === 'rect');
+  ellipseBtn.classList.remove('active');
+  highlightBtn.classList.remove('active');
+  overlayContainer.style.pointerEvents = drawMode ? 'auto' : 'none';
 });
 ellipseBtn.addEventListener('click', () => {
-  if (shapeMode === 'ellipse') {
-    shapeMode = null;
-    ellipseBtn.classList.remove('active');
-  } else {
-    shapeMode = 'ellipse';
-    ellipseBtn.classList.add('active');
-    rectBtn.classList.remove('active');
-  }
+  drawMode = drawMode === 'ellipse' ? null : 'ellipse';
+  ellipseBtn.classList.toggle('active', drawMode === 'ellipse');
+  rectBtn.classList.remove('active');
+  highlightBtn.classList.remove('active');
+  overlayContainer.style.pointerEvents = drawMode ? 'auto' : 'none';
 });
-
-// Toggle highlight annotation mode
 highlightBtn.addEventListener('click', () => {
-  highlightMode = !highlightMode;
-  highlightBtn.classList.toggle('active', highlightMode);
-  // disable other shape modes
-  shapeMode = null;
+  drawMode = drawMode === 'highlight' ? null : 'highlight';
+  highlightBtn.classList.toggle('active', drawMode === 'highlight');
   rectBtn.classList.remove('active');
   ellipseBtn.classList.remove('active');
+  overlayContainer.style.pointerEvents = drawMode ? 'auto' : 'none';
 });
 
 // Render shapes overlay
@@ -179,7 +167,7 @@ function renderShapes() {
 function renderHighlights() {
   highlights.filter(h => h.page === currentPage).forEach(h => {
     const el = document.createElement('div');
-    el.className = 'annotation';
+    el.className = 'highlight';
     el.dataset.comment = h.comment;
     // Position and size in CSS pixels
     const [x1Px, y1Px] = currentViewport.convertToViewportPoint(h.xMin, h.yMin);
@@ -480,48 +468,62 @@ nudgeRightBtn.addEventListener('click', () => nudge(nudgeStep, 0));
 nudgeUpBtn.addEventListener('click', () => nudge(0, nudgeStep));
 nudgeDownBtn.addEventListener('click', () => nudge(0, -nudgeStep));
 
-// New highlight drawing via canvas and document events
-canvas.addEventListener('mousedown', e => {
-  if (!highlightMode) return;
+// Simplified drawing handlers for shapes and highlights
+overlayContainer.addEventListener('pointerdown', (e) => {
+  if (!drawMode || e.target !== overlayContainer) return;
   e.preventDefault();
   drawing = true;
-  const rectCanvas = canvas.getBoundingClientRect();
-  startX = e.clientX - rectCanvas.left;
-  startY = e.clientY - rectCanvas.top;
-  // create preview element
+  const rect = overlayContainer.getBoundingClientRect();
+  startX = e.clientX - rect.left;
+  startY = e.clientY - rect.top;
   shapePreviewEl = document.createElement('div');
   shapePreviewEl.className = 'shape-preview';
-  shapePreviewEl.style.background = 'rgba(255,255,0,0.4)';
-  shapePreviewEl.style.border = '1px dashed rgba(255,255,0,0.8)';
+  if (drawMode === 'highlight') {
+    shapePreviewEl.style.background = 'rgba(255,255,0,0.4)';
+    shapePreviewEl.style.border     = '1px dashed rgba(255,255,0,0.8)';
+  } else {
+    const color = shapeColorInput.value;
+    const bw    = parseFloat(borderWidthInput.value) * zoomLevel;
+    shapePreviewEl.style.border       = `${bw}px solid ${color}`;
+    shapePreviewEl.style.background   = 'none';
+    shapePreviewEl.style.borderRadius = drawMode === 'ellipse' ? '50%' : '0';
+  }
   shapePreviewEl.style.left = `${startX}px`;
-  shapePreviewEl.style.top = `${startY}px`;
+  shapePreviewEl.style.top  = `${startY}px`;
   overlayContainer.appendChild(shapePreviewEl);
 });
-document.addEventListener('mousemove', e => {
-  if (!drawing || !highlightMode) return;
-  const rectCanvas = canvas.getBoundingClientRect();
-  const curX = e.clientX - rectCanvas.left;
-  const curY = e.clientY - rectCanvas.top;
+overlayContainer.addEventListener('pointermove', (e) => {
+  if (!drawing) return;
+  const rect = overlayContainer.getBoundingClientRect();
+  const curX = e.clientX - rect.left;
+  const curY = e.clientY - rect.top;
   const w = curX - startX;
   const h = curY - startY;
-  shapePreviewEl.style.width = `${Math.abs(w)}px`;
+  shapePreviewEl.style.left   = `${w < 0 ? curX : startX}px`;
+  shapePreviewEl.style.top    = `${h < 0 ? curY : startY}px`;
+  shapePreviewEl.style.width  = `${Math.abs(w)}px`;
   shapePreviewEl.style.height = `${Math.abs(h)}px`;
-  shapePreviewEl.style.left = `${w < 0 ? curX : startX}px`;
-  shapePreviewEl.style.top = `${h < 0 ? curY : startY}px`;
 });
-document.addEventListener('mouseup', e => {
-  if (!drawing || !highlightMode) return;
+overlayContainer.addEventListener('pointerup', (e) => {
+  if (!drawing) return;
   drawing = false;
   const rectPx = shapePreviewEl.getBoundingClientRect();
-  const parentRect = overlayContainer.getBoundingClientRect();
-  const x1Px = rectPx.left - parentRect.left;
-  const y1Px = rectPx.bottom - parentRect.top;
-  const x2Px = rectPx.right - parentRect.left;
-  const y2Px = rectPx.top - parentRect.top;
+  const parent = overlayContainer.getBoundingClientRect();
+  const x1Px = rectPx.left   - parent.left;
+  const y1Px = rectPx.bottom - parent.top;
+  const x2Px = rectPx.right  - parent.left;
+  const y2Px = rectPx.top    - parent.top;
   const [xMin, yMin] = currentViewport.convertToPdfPoint(x1Px, y1Px);
   const [xMax, yMax] = currentViewport.convertToPdfPoint(x2Px, y2Px);
-  const comment = prompt('Enter highlight comment:');
-  if (comment) highlights.push({ page: currentPage, xMin, yMin, xMax, yMax, comment });
+  if (drawMode === 'highlight') {
+    const comment = prompt('Enter highlight comment:');
+    if (comment) highlights.push({ page: currentPage, xMin, yMin, xMax, yMax, comment });
+  } else {
+    shapes.push({ page: currentPage, xMin, yMin, xMax, yMax,
+      color: shapeColorInput.value,
+      borderWidth: parseFloat(borderWidthInput.value),
+      mode: drawMode });
+  }
   overlayContainer.removeChild(shapePreviewEl);
   shapePreviewEl = null;
   renderPage();

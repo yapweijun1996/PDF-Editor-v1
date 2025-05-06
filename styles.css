@@ -165,7 +165,7 @@ footer {
   color: #666;
 }
 
-/* Overlay and annotation styles */
+/* Overlay and highlight annotation styles */
 .viewer-container {
   position: relative;
 }
@@ -173,14 +173,20 @@ footer {
   position: absolute;
   top: 0;
   left: 0;
-  pointer-events: none; /* default no pointer events */
+  pointer-events: none;
 }
-.annotation {
+/* Prevent non-interactive shapes from blocking events */
+.shape,
+.shape-preview {
+  pointer-events: none;
+}
+.highlight {
   background: rgba(255, 255, 0, 0.4);
   border: 1px solid rgba(255, 255, 0, 0.8);
+  pointer-events: auto;
   position: absolute;
 }
-.annotation:hover::after {
+.highlight:hover::after {
   content: attr(data-comment);
   position: absolute;
   background: #333;
@@ -191,15 +197,20 @@ footer {
   transform: translateY(-100%);
   z-index: 10;
 }
-.annotation.selected {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 4px var(--primary-hover);
-}
 .shape-preview {
   position: absolute;
   border: 1px dashed #000;
   background: none;
-  pointer-events: none;
+}
+/* Text annotation styles */
+.annotation {
+  position: absolute;
+  cursor: move;
+  pointer-events: auto;
+}
+.annotation.selected {
+  border: 1px dashed var(--primary-color);
+  box-shadow: 0 0 4px var(--primary-hover);
 }
 
 /* Coordinate inputs */
