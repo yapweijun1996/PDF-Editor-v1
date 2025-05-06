@@ -119,9 +119,9 @@ h1 {
 }
 
 .viewer {
-  width: 100%;
   display: block;
   background-color: #ccc;
+  /* ensure canvas dimensions match actual pixels without scaling */
 }
 
 .controls {
@@ -178,7 +178,8 @@ footer {
 .annotation {
   position: absolute;
   background-color: rgba(255, 255, 255, 0.7);
-  padding: 2px 4px;
+  padding: 0 4px;
+  line-height: 1;
   border: 1px dashed transparent;
   cursor: move;
   pointer-events: auto;

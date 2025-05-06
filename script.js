@@ -123,20 +123,25 @@ function renderAnnotations() {
       el.className = 'annotation';
       el.dataset.id = a.id;
       el.innerText = a.text;
-      // Style
+      // Positioning and styling
       el.style.position = 'absolute';
-      const left = a.x * zoomLevel;
-      const top = (currentViewport.height - a.y) * zoomLevel;
-      el.style.left = `${left}px`;
-      el.style.top = `${top}px`;
       el.style.fontFamily = fontMap[a.fontName] || fontMap.Helvetica;
-      el.style.fontSize = `${a.size}pt`;
+      const fontPx = a.size * zoomLevel;
+      el.style.fontSize = `${fontPx}px`;
+      el.style.lineHeight = `${fontPx}px`;
       el.style.color = a.color;
       el.style.cursor = 'move';
       el.style.pointerEvents = 'auto';
+      // Append, then measure height
+      overlayContainer.appendChild(el);
+      // Convert PDF point to CSS pixel
+      const [xPx, yPx] = currentViewport.convertToViewportPoint(a.x, a.y);
+      const h = el.offsetHeight;
+      // Position element so its bottom aligns with baseline
+      el.style.left = `${xPx}px`;
+      el.style.top = `${yPx - h}px`;
       // Drag events
       el.addEventListener('mousedown', annotationMouseDown);
-      overlayContainer.appendChild(el);
     });
 }
 
@@ -194,35 +199,24 @@ canvas.addEventListener('click', async (e) => {
   if (!pdfDoc) return alert('Load a PDF first.');
   const text = textInput.value.trim();
   if (!text) return alert('Enter text to add.');
-  // styling
-  const fontName = fontSelect.value;
-  const size = parseFloat(sizeInput.value);
-  if (isNaN(size) || size <= 0) return alert('Invalid font size');
-  const hex = colorInput.value;
-  const color = hex;
-  // coords
+  // Convert click coords to PDF point
   const rect = canvas.getBoundingClientRect();
   const xPx = e.clientX - rect.left;
   const yPx = e.clientY - rect.top;
-  const x = xPx / zoomLevel;
-  const y = (currentViewport.height - yPx) / zoomLevel;
-  // create annotation object
+  const [x, y] = currentViewport.convertToPdfPoint(xPx, yPx);
+  // Create annotation
   const anno = {
     id: Date.now() + '_' + Math.random(),
     page: currentPage,
     text,
-    fontName,
-    size,
-    color,
+    fontName: fontSelect.value,
+    size: parseFloat(sizeInput.value),
+    color: colorInput.value,
     align: alignSelect.value,
     x,
     y,
   };
   annotations.push(anno);
-  // update coord inputs
-  document.getElementById('xCoordInput').value = x.toFixed(2);
-  document.getElementById('yCoordInput').value = y.toFixed(2);
-  // render overlay
   renderAnnotations();
 });
 
@@ -241,18 +235,18 @@ function annotationMouseMove(e) {
   const el = overlayContainer.querySelector(`[data-id="${selectedAnno.id}"]`);
   let left = e.clientX - dragOffset.x;
   let top = e.clientY - dragOffset.y;
-  // clamp bounds
   left = Math.max(0, Math.min(left, canvas.width - el.offsetWidth));
   top = Math.max(0, Math.min(top, canvas.height - el.offsetHeight));
   el.style.left = `${left}px`;
   el.style.top = `${top}px`;
-  // update PDF coords
-  const x = left / zoomLevel;
-  const y = (currentViewport.height - top / zoomLevel);
-  selectedAnno.x = x;
-  selectedAnno.y = y;
-  document.getElementById('xCoordInput').value = x.toFixed(2);
-  document.getElementById('yCoordInput').value = y.toFixed(2);
+  // Convert CSS pixel baseline to PDF point
+  const h = el.offsetHeight;
+  const baselinePx = top + h;
+  const [xPdf, yPdf] = currentViewport.convertToPdfPoint(left, baselinePx);
+  selectedAnno.x = xPdf;
+  selectedAnno.y = yPdf;
+  document.getElementById('xCoordInput').value = xPdf.toFixed(2);
+  document.getElementById('yCoordInput').value = yPdf.toFixed(2);
 }
 function annotationMouseUp(e) {
   const el = overlayContainer.querySelector(`[data-id="${selectedAnno.id}"]`);
@@ -297,21 +291,17 @@ downloadBtn.addEventListener('click', async () => {
   const saveDoc = await PDFDocument.load(pdfBytes);
   for (const a of annotations) {
     const page = saveDoc.getPages()[a.page - 1];
-    let fontConst = StandardFonts.Helvetica;
-    if (a.fontName === 'TimesRoman') fontConst = StandardFonts.TimesRoman;
-    if (a.fontName === 'Courier') fontConst = StandardFonts.Courier;
-    const pdfFont = await saveDoc.embedFont(fontConst);
-    // parse color
-    const hex = a.color;
-    const r = parseInt(hex.slice(1, 3), 16) / 255;
-    const g = parseInt(hex.slice(3, 5), 16) / 255;
-    const b = parseInt(hex.slice(5, 7), 16) / 255;
+    /* embed font & color */
     page.drawText(a.text, {
       x: a.x,
       y: a.y,
       size: a.size,
-      font: pdfFont,
-      color: rgb(r, g, b),
+      font: await saveDoc.embedFont(fontMap[a.fontName] ? StandardFonts[a.fontName] : StandardFonts.Helvetica),
+      color: rgb(
+        parseInt(a.color.slice(1,3),16)/255,
+        parseInt(a.color.slice(3,5),16)/255,
+        parseInt(a.color.slice(5,7),16)/255
+      ),
     });
   }
   const bytes = await saveDoc.save();
