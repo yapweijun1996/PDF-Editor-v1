@@ -3,7 +3,7 @@
 // PDF.js worker setup
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
-const { PDFDocument, StandardFonts, rgb } = PDFLib;
+const { PDFDocument, StandardFonts, rgb, BlendMode } = PDFLib;
 
 // State variables
 let pdfDoc = null;           // pdf-lib document
@@ -404,12 +404,19 @@ downloadBtn.addEventListener('click', async () => {
     }
   }
 
-  // Draw highlight annotations (filled yellow)
+  // Draw highlight annotations (multiply blend to preserve text visibility)
   for (const h of highlights) {
     const page = pages[h.page - 1];
     const width = h.xMax - h.xMin;
     const height = h.yMax - h.yMin;
-    page.drawRectangle({ x: h.xMin, y: h.yMin, width, height, color: rgb(1, 1, 0) });
+    page.drawRectangle({
+      x: h.xMin,
+      y: h.yMin,
+      width,
+      height,
+      color: rgb(1, 1, 0),
+      blendMode: BlendMode.Multiply
+    });
   }
 
   // Draw text annotations
