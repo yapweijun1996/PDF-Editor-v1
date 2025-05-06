@@ -52,6 +52,12 @@ const fontSelect = document.getElementById('fontSelect');
 const sizeInput = document.getElementById('sizeInput');
 const colorInput = document.getElementById('colorInput');
 const alignSelect = document.getElementById('alignSelect');
+const xCoordInput = document.getElementById('xCoordInput');
+const yCoordInput = document.getElementById('yCoordInput');
+const nudgeLeftBtn = document.getElementById('nudgeLeftBtn');
+const nudgeRightBtn = document.getElementById('nudgeRightBtn');
+const nudgeUpBtn = document.getElementById('nudgeUpBtn');
+const nudgeDownBtn = document.getElementById('nudgeDownBtn');
 
 // Update undo/redo button states
 function updateUndoRedoButtons() {
@@ -224,6 +230,8 @@ canvas.addEventListener('click', async (e) => {
 function annotationMouseDown(e) {
   const id = e.currentTarget.dataset.id;
   selectedAnno = annotations.find(a => a.id === id);
+  xCoordInput.value = selectedAnno.x.toFixed(1);
+  yCoordInput.value = selectedAnno.y.toFixed(1);
   dragOffset.x = e.clientX - e.currentTarget.offsetLeft;
   dragOffset.y = e.clientY - e.currentTarget.offsetTop;
   e.currentTarget.classList.add('selected');
@@ -319,4 +327,49 @@ document.addEventListener('keydown', e => {
   if (e.ctrlKey && e.key==='z') { e.preventDefault(); undoBtn.click(); }
   if (e.ctrlKey && (e.key==='y'||(e.shiftKey&&e.key==='Z'))) { e.preventDefault(); redoBtn.click(); }
   if (e.ctrlKey && e.key==='s') { e.preventDefault(); downloadBtn.click(); }
+});
+
+// Enable fine-tuning via inputs & nudge
+xCoordInput.addEventListener('change', () => {
+  if (!selectedAnno) return;
+  const val = parseFloat(xCoordInput.value);
+  if (!isNaN(val)) {
+    selectedAnno.x = val;
+    renderAnnotations();
+  }
+});
+yCoordInput.addEventListener('change', () => {
+  if (!selectedAnno) return;
+  const val = parseFloat(yCoordInput.value);
+  if (!isNaN(val)) {
+    selectedAnno.y = val;
+    renderAnnotations();
+  }
+});
+
+// Nudge handlers (0.1 point per click)
+const nudgeStep = 0.1;
+nudgeLeftBtn.addEventListener('click', () => {
+  if (!selectedAnno) return;
+  selectedAnno.x -= nudgeStep;
+  xCoordInput.value = selectedAnno.x.toFixed(1);
+  renderAnnotations();
+});
+nudgeRightBtn.addEventListener('click', () => {
+  if (!selectedAnno) return;
+  selectedAnno.x += nudgeStep;
+  xCoordInput.value = selectedAnno.x.toFixed(1);
+  renderAnnotations();
+});
+nudgeUpBtn.addEventListener('click', () => {
+  if (!selectedAnno) return;
+  selectedAnno.y += nudgeStep;
+  yCoordInput.value = selectedAnno.y.toFixed(1);
+  renderAnnotations();
+});
+nudgeDownBtn.addEventListener('click', () => {
+  if (!selectedAnno) return;
+  selectedAnno.y -= nudgeStep;
+  yCoordInput.value = selectedAnno.y.toFixed(1);
+  renderAnnotations();
 }); 

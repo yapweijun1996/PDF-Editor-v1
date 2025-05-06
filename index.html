@@ -51,6 +51,9 @@
       <input type="text" id="textInput" placeholder="Text to add" />
       <select id="fontSelect">
         <option value="Helvetica">Helvetica</option>
+        <option value="HelveticaBold">Helvetica Bold</option>
+        <option value="HelveticaOblique">Helvetica Oblique</option>
+        <option value="HelveticaBoldOblique">Helvetica Bold Oblique</option>
         <option value="TimesRoman">Times Roman</option>
         <option value="Courier">Courier</option>
       </select>
@@ -61,8 +64,12 @@
         <option value="center">Center</option>
         <option value="right">Right</option>
       </select>
-      <input type="number" id="xCoordInput" placeholder="X (pts)" readonly />
-      <input type="number" id="yCoordInput" placeholder="Y (pts)" readonly />
+      <input type="number" id="xCoordInput" placeholder="X (pts)" step="0.1" />
+      <input type="number" id="yCoordInput" placeholder="Y (pts)" step="0.1" />
+      <button type="button" id="nudgeLeftBtn" title="Nudge Left">⬅️</button>
+      <button type="button" id="nudgeRightBtn" title="Nudge Right">➡️</button>
+      <button type="button" id="nudgeUpBtn" title="Nudge Up">⬆️</button>
+      <button type="button" id="nudgeDownBtn" title="Nudge Down">⬇️</button>
     </div>
   </div>
   <script src="script.js"></script>
