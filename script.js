@@ -3,7 +3,7 @@
 // PDF.js worker setup
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
-const { PDFDocument, StandardFonts, rgb, BlendMode } = PDFLib;
+const { PDFDocument, StandardFonts, rgb, PDFName, PDFNumber, PDFString, PDFBoolean } = PDFLib;
 
 // State variables
 let pdfDoc = null;           // pdf-lib document
@@ -386,7 +386,6 @@ redoBtn.addEventListener('click', async () => {
 // Save PDF including shapes, highlights, and text annotations
 downloadBtn.addEventListener('click', async () => {
   if (!pdfBytes) return alert('Load a PDF first.');
-  // Load a fresh PDFDocument from original bytes
   const saveDoc = await PDFDocument.load(pdfBytes);
   const pages = saveDoc.getPages();
 
@@ -404,19 +403,44 @@ downloadBtn.addEventListener('click', async () => {
     }
   }
 
-  // Draw highlight annotations (multiply blend to preserve text visibility)
+  // Create PDF highlight annotations with popups for comments
   for (const h of highlights) {
     const page = pages[h.page - 1];
-    const width = h.xMax - h.xMin;
-    const height = h.yMax - h.yMin;
-    page.drawRectangle({
-      x: h.xMin,
-      y: h.yMin,
-      width,
-      height,
-      color: rgb(1, 1, 0),
-      blendMode: BlendMode.Multiply
+    // Create highlight annotation
+    const rectNums = [h.xMin, h.yMin, h.xMax, h.yMax].map(n => PDFNumber.of(n));
+    const quadNums = [h.xMin, h.yMax, h.xMax, h.yMax, h.xMax, h.yMin, h.xMin, h.yMin]
+      .map(n => PDFNumber.of(n));
+    const highlightDict = saveDoc.context.obj({
+      Type: PDFName.of('Annot'),
+      Subtype: PDFName.of('Highlight'),
+      Rect: saveDoc.context.obj(rectNums),
+      QuadPoints: saveDoc.context.obj(quadNums),
+      C: saveDoc.context.obj([PDFNumber.of(1), PDFNumber.of(1), PDFNumber.of(0)]),
+      CA: PDFNumber.of(0.2),
+      Border: saveDoc.context.obj([PDFNumber.of(0), PDFNumber.of(0), PDFNumber.of(0)]),
+      Contents: PDFString.of(h.comment)
     });
+    const highlightRef = saveDoc.context.register(highlightDict);
+    // Create popup annotation linked to highlight
+    const popupRect = [h.xMax + 5, h.yMax - 20, h.xMax + 155, h.yMax + 60]
+      .map(n => PDFNumber.of(n));
+    const popupDict = saveDoc.context.obj({
+      Type: PDFName.of('Annot'),
+      Subtype: PDFName.of('Popup'),
+      Rect: saveDoc.context.obj(popupRect),
+      Parent: highlightRef,
+      Contents: PDFString.of(h.comment),
+      Open: PDFBoolean.of(true)
+    });
+    const popupRef = saveDoc.context.register(popupDict);
+    // Add both annotations to the page
+    const annotsKey = PDFName.of('Annots');
+    const existing = page.node.get(annotsKey);
+    if (existing) {
+      existing.push(highlightRef, popupRef);
+    } else {
+      page.node.set(annotsKey, saveDoc.context.obj([highlightRef, popupRef]));
+    }
   }
 
   // Draw text annotations
